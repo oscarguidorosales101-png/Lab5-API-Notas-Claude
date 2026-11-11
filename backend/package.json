@@ -1,0 +1,29 @@
+{
+  "name": "lab5-api-notas-claude-backend",
+  "version": "1.0.0",
+  "description": "Backend API REST para gestión de notas con Express 5, Swagger, Zod y almacenamiento en memoria",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "express",
+    "rest-api",
+    "swagger",
+    "zod"
+  ],
+  "author": "Integrante A",
+  "license": "ISC",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.7",
+    "express": "^5.0.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
