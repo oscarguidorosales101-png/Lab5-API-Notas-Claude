@@ -3,6 +3,10 @@ const { z } = require('zod');
 const { validar } = require('../middlewares/validar');
 const deepseek = require('../services/deepseek.service');
 const costosService = require('../services/costos.service');
+const { limitarIA } = require('../middlewares/limitarIA');
+const conversaciones = require('../services/conversacion.service');
+
+router.use((req, res, next) => req.method === 'POST' ? limitarIA(req, res, next) : next());
 
 const preguntaSchema = z.object({
   pregunta: z.string().trim().min(3).max(2000)
@@ -59,7 +63,7 @@ const preguntaSchema = z.object({
  * components:
  *   responses:
  *     IALimite:
- *       description: Límite de peticiones del proveedor.
+ *       description: Límite del proveedor (IA_NO_DISPONIBLE) o límite local compartido de 60 peticiones por IP cada 15 minutos (LIMITE_IA_EXCEDIDO, con Retry-After).
  *       content:
  *         application/json:
  *           schema: { $ref: '#/components/schemas/ErrorResponse' }
@@ -205,6 +209,127 @@ router.get('/uso/resumen', async (req, res, next) => {
     res.json(estadisticas);
   } catch (error) {
     next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /api/ia/conversar:
+ *   post:
+ *     summary: Conversar con historial de varios turnos
+ *     description: Omite conversacionId al comenzar y reutiliza el identificador devuelto en los siguientes turnos. Historial en memoria, privado por identificador, expira tras 30 minutos sin actividad; se conservan los últimos 10 turnos. Se pierde al reiniciar. Límite compartido de 60 solicitudes por IP cada 15 minutos.
+ *     tags: [IA]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [pregunta]
+ *             properties:
+ *               pregunta: { type: string, minLength: 3, maxLength: 2000 }
+ *               conversacionId: { type: string, format: uuid }
+ *           example: { pregunta: 'Me llamo Ana. Recuerda mi nombre.' }
+ *     responses:
+ *       200:
+ *         description: Identificador para continuar, respuesta y consumo real.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [conversacionId, respuesta, uso]
+ *               properties:
+ *                 conversacionId: { type: string, format: uuid }
+ *                 respuesta: { type: string }
+ *                 uso: { type: object, additionalProperties: true }
+ *       400: { description: Pregunta o identificador inválidos. }
+ *       404: { description: Conversación inexistente o expirada. }
+ *       409: { description: Ya existe una solicitud en curso para esta conversación. }
+ *       429: { description: Límite por IP o capacidad de conversaciones alcanzado. }
+ *       502: { $ref: '#/components/responses/IAFallo' }
+ *       503: { $ref: '#/components/responses/IAOcupada' }
+ *       504: { $ref: '#/components/responses/IATimeout' }
+ */
+router.post('/conversar', validar(preguntaSchema.extend({
+  conversacionId: z.string().uuid().optional()
+})), async (req, res) => {
+  const resultado = await conversaciones.conversar(req.body.pregunta, req.body.conversacionId);
+  await costosService.registrarConsumo({
+    tipoOperacion: 'pregunta', modelo: process.env.DEEPSEEK_MODEL, uso: resultado.uso
+  });
+  res.json(resultado);
+});
+
+/**
+ * @openapi
+ * /api/ia/preguntar/stream:
+ *   post:
+ *     summary: Recibir una respuesta progresiva mediante SSE
+ *     description: Emite eventos texto con fragmentos, fin con uso real, o error con IA_NO_DISPONIBLE. Después de iniciar SSE los fallos se comunican por evento, sin cambiar el HTTP 200. Al desconectarse el cliente se cancela la llamada. Límite compartido de 60 solicitudes por IP cada 15 minutos. Para ver fragmentos al llegar utiliza un cliente SSE o curl con -N; Swagger puede mostrar el resultado al finalizar.
+ *     tags: [IA]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [pregunta]
+ *             properties:
+ *               pregunta: { type: string, minLength: 3, maxLength: 2000 }
+ *     responses:
+ *       200:
+ *         description: Flujo SSE con eventos texto, fin o error.
+ *         content:
+ *           text/event-stream:
+ *             schema: { type: string }
+ *       400: { description: Pregunta inválida. }
+ *       429: { description: Límite por IP alcanzado. }
+ *       502: { $ref: '#/components/responses/IAFallo' }
+ *       503: { $ref: '#/components/responses/IAOcupada' }
+ *       504: { $ref: '#/components/responses/IATimeout' }
+ */
+router.post('/preguntar/stream', validar(preguntaSchema), async (req, res, next) => {
+  const controller = new AbortController();
+  const cancelar = () => controller.abort();
+  res.on('close', cancelar);
+  const enviar = (evento, datos) => {
+    if (!res.headersSent) {
+      res.set({ 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' });
+      res.flushHeaders();
+    }
+    res.write(`event: ${evento}\ndata: ${JSON.stringify(datos)}\n\n`);
+  };
+  // El timeout del SDK cubre la apertura; este plazo también limita la lectura del flujo.
+  const plazo = setTimeout(() => {
+    controller.abort();
+    if (res.destroyed || res.writableEnded) return;
+    if (res.headersSent) {
+      enviar('error', { error: 'IA_NO_DISPONIBLE' });
+      res.end();
+    } else {
+      next(new (require('openai').APIConnectionTimeoutError)());
+    }
+  }, 30000);
+  try {
+    for await (const fragmento of deepseek.preguntarStream(req.body.pregunta, controller.signal)) {
+      if (controller.signal.aborted) return;
+      if (fragmento.texto) enviar('texto', fragmento);
+      if (fragmento.uso) {
+        await costosService.registrarConsumo({
+          tipoOperacion: 'pregunta', modelo: process.env.DEEPSEEK_MODEL, uso: fragmento.uso
+        });
+        enviar('fin', fragmento);
+      }
+    }
+    res.end();
+  } catch (error) {
+    if (controller.signal.aborted) return;
+    if (!res.headersSent) return next(error);
+    enviar('error', { error: 'IA_NO_DISPONIBLE' });
+    res.end();
+  } finally {
+    clearTimeout(plazo);
+    res.off('close', cancelar);
   }
 });
 
