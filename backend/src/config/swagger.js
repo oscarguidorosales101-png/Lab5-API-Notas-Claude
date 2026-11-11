@@ -5,10 +5,10 @@ const options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'API REST de Notas y DeepSeek - Laboratorio #5',
-      version: '1.1.0',
+      title: 'Sistema de Gestión Académica y API de Notas - Laboratorio #5',
+      version: '2.0.0',
       description:
-        'API REST profesional desarrollada con Express 5, Prisma ORM y SQLite para la gestión de notas, integración con DeepSeek AI y seguimiento detallado de consumo y costos de tokens.'
+        'API REST profesional desarrollada con Express 5, Prisma ORM v6 y MySQL (Notas_lab) para la gestión académica completa (usuarios, materias, prerrequisitos, períodos, matrículas y calificaciones ponderadas), notas organizadas por materia y tema, e integración con DeepSeek AI con seguimiento detallado de consumo y costos.'
     },
     servers: [
       {
@@ -18,16 +18,144 @@ const options = {
     ],
     tags: [
       {
+        name: 'Usuarios',
+        description: 'Gestión de usuarios del sistema (estudiantes, docentes, administradores)'
+      },
+      {
+        name: 'Materias',
+        description: 'Gestión del catálogo de asignaturas y créditos académicos'
+      },
+      {
+        name: 'Prerrequisitos',
+        description: 'Gestión de dependencias y validaciones de prerrequisitos entre asignaturas'
+      },
+      {
+        name: 'Períodos',
+        description: 'Gestión de períodos académicos y ciclos lectivos'
+      },
+      {
+        name: 'Matrículas',
+        description: 'Inscripción de estudiantes con verificación estricta de prerrequisitos aprobados'
+      },
+      {
+        name: 'Calificaciones',
+        description: 'Registro de evaluaciones, ponderaciones acumuladas y cálculo de nota final'
+      },
+      {
+        name: 'Temas',
+        description: 'Clasificación temática de contenidos para asignaturas y apuntes'
+      },
+      {
         name: 'Notas',
-        description: 'Endpoints para la gestión CRUD de notas con persistencia en SQLite'
+        description: 'Apuntes académicos con filtros por estudiante, materia y tema'
       },
       {
         name: 'IA',
-        description: 'Endpoints de Inteligencia Artificial (DeepSeek) y analítica de consumo/costos'
+        description: 'Inteligencia Artificial (DeepSeek) y analítica de consumo y costos de tokens'
       }
     ],
     components: {
       schemas: {
+        Usuario: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            nombre: { type: 'string', example: 'Carlos' },
+            apellidos: { type: 'string', example: 'Alvarado Quesada' },
+            email: { type: 'string', format: 'email', example: 'carlos.alvarado@universidad.ac.cr' },
+            rol: { type: 'string', enum: ['ADMIN', 'DOCENTE', 'ESTUDIANTE'], example: 'ESTUDIANTE' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        Materia: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            codigo: { type: 'string', example: 'CI-101' },
+            nombre: { type: 'string', example: 'Ciencias Generales' },
+            descripcion: { type: 'string', example: 'Fundamentos de ciencias biológicas y químicas' },
+            creditos: { type: 'integer', example: 4 },
+            notaMinimaAprobatoria: { type: 'number', example: 70.0 },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' }
+          }
+        },
+        PeriodoAcademico: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            nombre: { type: 'string', example: 'Primer Cuatrimestre 2026' },
+            fechaInicio: { type: 'string', format: 'date', example: '2026-01-15' },
+            fechaFin: { type: 'string', format: 'date', example: '2026-04-30' },
+            anio: { type: 'integer', example: 2026 },
+            periodo: { type: 'string', example: '1C' },
+            activo: { type: 'boolean', example: true }
+          }
+        },
+        Matricula: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            userId: { type: 'integer', example: 1 },
+            subjectId: { type: 'integer', example: 2 },
+            academicPeriodId: { type: 'integer', example: 1 },
+            fechaMatricula: { type: 'string', format: 'date-time' },
+            estado: { type: 'string', example: 'ACTIVA' },
+            notaFinal: { type: 'number', nullable: true, example: 85.5 }
+          }
+        },
+        Calificacion: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            enrollmentId: { type: 'integer', example: 1 },
+            nombreEvaluacion: { type: 'string', example: 'Examen Parcial 1' },
+            puntajeObtenido: { type: 'number', example: 88 },
+            puntajeMaximo: { type: 'number', example: 100 },
+            porcentaje: { type: 'number', example: 30 },
+            fechaEvaluacion: { type: 'string', format: 'date-time' },
+            observaciones: { type: 'string', nullable: true, example: 'Excelente dominio del tema' }
+          }
+        },
+        ResultadoFinal: {
+          type: 'object',
+          properties: {
+            enrollmentId: { type: 'integer', example: 1 },
+            estudiante: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer', example: 1 },
+                nombreCompleto: { type: 'string', example: 'Carlos Alvarado' },
+                email: { type: 'string', example: 'carlos@universidad.ac.cr' }
+              }
+            },
+            materia: {
+              type: 'object',
+              properties: {
+                id: { type: 'integer', example: 1 },
+                codigo: { type: 'string', example: 'CI-101' },
+                nombre: { type: 'string', example: 'Ciencias Generales' },
+                notaMinimaAprobatoria: { type: 'number', example: 70.0 }
+              }
+            },
+            porcentajeEvaluado: { type: 'number', example: 100 },
+            notaFinal: { type: 'number', example: 85.5 },
+            notaMinimaAprobatoria: { type: 'number', example: 70.0 },
+            aprobada: { type: 'boolean', example: true },
+            estado: { type: 'string', example: 'APROBADA' }
+          }
+        },
+        TemaAcademico: {
+          type: 'object',
+          properties: {
+            id: { type: 'integer', example: 1 },
+            nombre: { type: 'string', example: 'Estructura Atómica' },
+            descripcion: { type: 'string', example: 'Modelos atómicos y configuración electrónica' },
+            subjectId: { type: 'integer', nullable: true, example: 2 },
+            createdAt: { type: 'string', format: 'date-time' }
+          }
+        },
         Nota: {
           type: 'object',
           required: ['id', 'titulo', 'contenido'],
@@ -35,27 +163,43 @@ const options = {
             id: {
               type: 'integer',
               example: 1,
-              description: 'Identificador único numérico autoincremental de la nota'
+              description: 'Identificador único numérico de la nota'
             },
             titulo: {
               type: 'string',
-              example: 'Mi primera nota',
+              example: 'Apuntes de Enlaces Químicos',
               description: 'Título de la nota (1 a 100 caracteres)'
             },
             contenido: {
               type: 'string',
-              example: 'Contenido de ejemplo para la nota.',
+              example: 'Los enlaces covalentes se forman compartiendo pares de electrones...',
               description: 'Contenido completo de la nota (1 a 5000 caracteres)'
+            },
+            userId: {
+              type: 'integer',
+              nullable: true,
+              example: 1,
+              description: 'ID del estudiante propietario'
+            },
+            subjectId: {
+              type: 'integer',
+              nullable: true,
+              example: 2,
+              description: 'ID de la materia académica asociada'
+            },
+            topicId: {
+              type: 'integer',
+              nullable: true,
+              example: 1,
+              description: 'ID del tema académico asociado'
             },
             createdAt: {
               type: 'string',
-              format: 'date-time',
-              description: 'Fecha de creación del registro'
+              format: 'date-time'
             },
             updatedAt: {
               type: 'string',
-              format: 'date-time',
-              description: 'Fecha de última actualización del registro'
+              format: 'date-time'
             }
           }
         },
@@ -65,17 +209,27 @@ const options = {
           properties: {
             titulo: {
               type: 'string',
-              example: 'Mi primera nota',
+              example: 'Apuntes de Química',
               minLength: 1,
-              maxLength: 100,
-              description: 'Título de la nota'
+              maxLength: 100
             },
             contenido: {
               type: 'string',
-              example: 'Contenido de ejemplo para la nota.',
+              example: 'Contenido sobre reacciones redox...',
               minLength: 1,
-              maxLength: 5000,
-              description: 'Contenido de la nota'
+              maxLength: 5000
+            },
+            userId: {
+              type: 'integer',
+              example: 1
+            },
+            subjectId: {
+              type: 'integer',
+              example: 2
+            },
+            topicId: {
+              type: 'integer',
+              example: 1
             }
           }
         },

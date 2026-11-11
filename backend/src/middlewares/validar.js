@@ -5,6 +5,9 @@ const { z } = require('zod');
  * Cumple con las restricciones:
  * - titulo: obligatorio, string, min 1, max 100 caracteres.
  * - contenido: obligatorio, string, min 1, max 5000 caracteres.
+ * - userId: opcional, entero positivo (relación académica).
+ * - subjectId: opcional, entero positivo (relación académica).
+ * - topicId: opcional, entero positivo (relación académica).
  */
 const notaSchema = z.object({
   titulo: z
@@ -22,12 +25,15 @@ const notaSchema = z.object({
     })
     .trim()
     .min(1, 'El contenido no puede estar vacío y debe tener al menos 1 carácter')
-    .max(5000, 'El contenido no puede superar los 5000 caracteres')
+    .max(5000, 'El contenido no puede superar los 5000 caracteres'),
+  userId: z.number().int().positive().optional().nullable(),
+  subjectId: z.number().int().positive().optional().nullable(),
+  topicId: z.number().int().positive().optional().nullable()
 });
 
 /**
  * Middleware de orden superior para validar cualquier target (body, params, query) con Zod.
- * Reutilizable para rutas actuales y futuras integraciones (ej. Integrante B con IA).
+ * Reutilizable para rutas actuales y futuras integraciones.
  * 
  * @param {import('zod').ZodSchema} schema - Esquema Zod a aplicar
  * @param {'body'|'params'|'query'} [target='body'] - Propiedad del request a validar
@@ -36,20 +42,20 @@ const validar = (schema, target = 'body') => {
   return (req, res, next) => {
     const data = req[target];
 
-    // Rechazar explícitamente cuerpos no definidos o vacíos
-    if (!data || (typeof data === 'object' && Object.keys(data).length === 0 && !Array.isArray(data))) {
+    // Rechazar explícitamente cuerpos no definidos o vacíos cuando target es body
+    if (target === 'body' && (!data || (typeof data === 'object' && Object.keys(data).length === 0 && !Array.isArray(data)))) {
       return res.status(400).json({
         error: 'Error de validación',
         detalles: [
           {
             campo: target,
-            mensaje: `El ${target === 'body' ? 'cuerpo de la solicitud' : target} no puede estar vacío`
+            mensaje: `El cuerpo de la solicitud no puede estar vacío`
           }
         ]
       });
     }
 
-    const resultado = schema.safeParse(data);
+    const resultado = schema.safeParse(data || {});
 
     if (!resultado.success) {
       const detalles = resultado.error.issues.map((issue) => ({

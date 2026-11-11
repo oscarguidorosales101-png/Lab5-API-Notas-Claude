@@ -3,23 +3,147 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  DOCENTE
+  ESTUDIANTE
+}
+
+model User {
+  id          Int          @id @default(autoincrement())
+  nombre      String       @db.VarChar(100)
+  apellidos   String       @db.VarChar(100)
+  email       String       @unique @db.VarChar(150)
+  password    String       @db.VarChar(255)
+  rol         Role         @default(ESTUDIANTE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  enrollments Enrollment[]
+  notes       Note[]
+}
+
+model Subject {
+  id                    Int                   @id @default(autoincrement())
+  codigo                String                @unique @db.VarChar(20)
+  nombre                String                @db.VarChar(150)
+  descripcion           String?               @db.Text
+  creditos              Int                   @default(3)
+  notaMinimaAprobatoria Float                 @default(70.0)
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  prerrequisitos        SubjectPrerequisite[] @relation("SubjectPrerequisites")
+  esPrerrequisitoDe     SubjectPrerequisite[] @relation("PrerequisiteOf")
+  enrollments           Enrollment[]
+  temas                 NoteTopic[]
+  notes                 Note[]
+}
+
+model SubjectPrerequisite {
+  id             Int      @id @default(autoincrement())
+  subjectId      Int
+  prerequisiteId Int
+  createdAt      DateTime @default(now())
+
+  subject      Subject @relation("SubjectPrerequisites", fields: [subjectId], references: [id], onDelete: Cascade)
+  prerequisite Subject @relation("PrerequisiteOf", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+
+  @@unique([subjectId, prerequisiteId])
+  @@index([prerequisiteId])
+}
+
+model AcademicPeriod {
+  id          Int          @id @default(autoincrement())
+  nombre      String       @db.VarChar(100)
+  fechaInicio DateTime
+  fechaFin    DateTime
+  anio        Int
+  periodo     String       @db.VarChar(20)
+  activo      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id               Int            @id @default(autoincrement())
+  userId           Int
+  subjectId        Int
+  academicPeriodId Int
+  fechaMatricula   DateTime       @default(now())
+  estado           String         @default("ACTIVA") @db.VarChar(20)
+  notaFinal        Float?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject        Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  academicPeriod AcademicPeriod @relation(fields: [academicPeriodId], references: [id], onDelete: Cascade)
+  grades         Grade[]
+
+  @@unique([userId, subjectId, academicPeriodId])
+  @@index([subjectId])
+  @@index([academicPeriodId])
+}
+
+model Grade {
+  id               Int        @id @default(autoincrement())
+  enrollmentId     Int
+  nombreEvaluacion String     @db.VarChar(100)
+  puntajeObtenido  Float
+  puntajeMaximo    Float
+  porcentaje       Float
+  fechaEvaluacion  DateTime   @default(now())
+  observaciones    String?    @db.Text
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@index([enrollmentId])
+}
+
+model NoteTopic {
+  id          Int      @id @default(autoincrement())
+  nombre      String   @db.VarChar(100)
+  descripcion String?  @db.Text
+  subjectId   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  materia Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  notes   Note[]
+
+  @@index([subjectId])
+}
+
 model Note {
-  id        Int      @id @default(autoincrement())
-  titulo    String
-  contenido String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        Int        @id @default(autoincrement())
+  titulo    String     @db.VarChar(100)
+  contenido String     @db.Text
+  userId    Int?
+  subjectId Int?
+  topicId   Int?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user    User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  subject Subject?   @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  topic   NoteTopic? @relation(fields: [topicId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([subjectId])
+  @@index([topicId])
 }
 
 model AIUsage {
   id            Int      @id @default(autoincrement())
-  requestId     String?
-  tipoOperacion String
-  modelo        String
+  requestId     String?  @db.VarChar(100)
+  tipoOperacion String   @db.VarChar(50)
+  modelo        String   @db.VarChar(50)
   tokensEntrada Int
   tokensSalida  Int
   totalTokens   Int
@@ -28,4 +152,3 @@ model AIUsage {
   costoTotal    Float
   createdAt     DateTime @default(now())
 }
-

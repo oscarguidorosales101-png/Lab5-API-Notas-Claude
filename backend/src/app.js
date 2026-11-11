@@ -2,6 +2,13 @@ const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const { swaggerSpec } = require('./config/swagger');
 const notasRoutes = require('./routes/notas.routes');
+const usuariosRoutes = require('./routes/usuarios.routes');
+const materiasRoutes = require('./routes/materias.routes');
+const periodosRoutes = require('./routes/periodos.routes');
+const matriculasRoutes = require('./routes/matriculas.routes');
+const calificacionesRoutes = require('./routes/calificaciones.routes');
+const temasRoutes = require('./routes/temas.routes');
+const iaRoutes = require('./routes/ia.routes');
 const errorHandler = require('./middlewares/errorHandler');
 const { NotFoundError } = require('./utils/errors');
 
@@ -17,9 +24,15 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-// Rutas de la API
+// Rutas académicas y del laboratorio
 app.use('/api/notas', notasRoutes);
-app.use('/api/ia', require('./routes/ia.routes'));
+app.use('/api/usuarios', usuariosRoutes);
+app.use('/api/materias', materiasRoutes);
+app.use('/api/periodos', periodosRoutes);
+app.use('/api/matriculas', matriculasRoutes);
+app.use('/api/calificaciones', calificacionesRoutes);
+app.use('/api/temas', temasRoutes);
+app.use('/api/ia', iaRoutes);
 
 // Manejo de rutas no encontradas (404)
 app.use((req, res, next) => {
