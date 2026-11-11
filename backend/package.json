@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "node --test"
+    "test": "node --test --test-concurrency=1",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio"
   },
   "keywords": [
     "express",
@@ -17,6 +20,7 @@
   "author": "Integrante A",
   "license": "ISC",
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "dotenv": "^16.4.7",
     "express": "^5.0.1",
     "openai": "^7.55.0",
@@ -25,6 +29,8 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "nodemon": "^3.1.9",
+    "prisma": "^6.19.3",
+    "supertest": "^7.3.2"
   }
 }

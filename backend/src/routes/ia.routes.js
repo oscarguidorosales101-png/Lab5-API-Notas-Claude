@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { z } = require('zod');
 const { validar } = require('../middlewares/validar');
 const deepseek = require('../services/deepseek.service');
+const costosService = require('../services/costos.service');
 
 const preguntaSchema = z.object({
   pregunta: z.string().trim().min(3).max(2000)
@@ -12,7 +13,7 @@ const preguntaSchema = z.object({
  * /api/ia/preguntar:
  *   post:
  *     summary: Responder una pregunta con DeepSeek
- *     description: Valida y elimina espacios externos antes de llamar al proveedor. Retorna su texto y consumo real de tokens.
+ *     description: Valida y elimina espacios externos antes de llamar al proveedor. Retorna su texto y consumo real de tokens, registrando el consumo de forma persistente.
  *     tags: [IA]
  *     requestBody:
  *       required: true
@@ -82,8 +83,129 @@ const preguntaSchema = z.object({
  *           schema: { $ref: '#/components/schemas/ErrorResponse' }
  *           example: { error: IA_NO_DISPONIBLE }
  */
-router.post('/preguntar', validar(preguntaSchema), async (req, res) => {
-  res.json(await deepseek.preguntar(req.body.pregunta));
+router.post('/preguntar', validar(preguntaSchema), async (req, res, next) => {
+  try {
+    const resultado = await deepseek.preguntar(req.body.pregunta);
+
+    // Registro persistente del consumo de tokens y estimación de costos
+    if (resultado.uso) {
+      await costosService.registrarConsumo({
+        tipoOperacion: 'pregunta',
+        modelo: process.env.DEEPSEEK_MODEL || 'deepseek-flash',
+        uso: resultado.uso
+      });
+    }
+
+    res.json(resultado);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /api/ia/uso:
+ *   get:
+ *     summary: Historial de consumo y costos de IA
+ *     description: Retorna el listado paginado de todas las solicitudes realizadas al proveedor de IA con su consumo de tokens y costos calculados.
+ *     tags: [IA]
+ *     parameters:
+ *       - in: query
+ *         name: limite
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           minimum: 1
+ *           maximum: 100
+ *         description: Cantidad máxima de registros a retornar
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *           minimum: 0
+ *         description: Cantidad de registros a omitir para paginación
+ *     responses:
+ *       200:
+ *         description: Historial de consumo obtenido exitosamente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [total, limite, offset, registros]
+ *               properties:
+ *                 total: { type: integer, example: 10 }
+ *                 limite: { type: integer, example: 50 }
+ *                 offset: { type: integer, example: 0 }
+ *                 registros:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/AIUsageRecord'
+ */
+router.get('/uso', async (req, res, next) => {
+  try {
+    const { limite, offset } = req.query;
+    const datos = await costosService.obtenerHistorial({ limite, offset });
+    res.json(datos);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /api/ia/uso/hoy:
+ *   get:
+ *     summary: Resumen acumulado de consumo diario de IA
+ *     description: Calcula los totales de solicitudes, tokens consumidos y costos acumulados del día en curso según la zona horaria configurada.
+ *     tags: [IA]
+ *     parameters:
+ *       - in: query
+ *         name: timezone
+ *         schema:
+ *           type: string
+ *           example: "America/Costa_Rica"
+ *         description: "Zona horaria IANA opcional para el cálculo (default: variable de entorno TIMEZONE)"
+ *     responses:
+ *       200:
+ *         description: Resumen del consumo diario obtenido exitosamente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ResumenDiario'
+ */
+router.get('/uso/hoy', async (req, res, next) => {
+  try {
+    const { timezone } = req.query;
+    const resumen = await costosService.obtenerResumenHoy({ timezone });
+    res.json(resumen);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /api/ia/uso/resumen:
+ *   get:
+ *     summary: Estadísticas generales e históricas de consumo de IA
+ *     description: Proporciona métricas consolidadas de consumo y costos, incluyendo desglose por tipo de operación (preguntas vs resúmenes).
+ *     tags: [IA]
+ *     responses:
+ *       200:
+ *         description: Métricas globales de consumo obtenidas con éxito.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ResumenGeneral'
+ */
+router.get('/uso/resumen', async (req, res, next) => {
+  try {
+    const estadisticas = await costosService.obtenerResumenGeneral();
+    res.json(estadisticas);
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

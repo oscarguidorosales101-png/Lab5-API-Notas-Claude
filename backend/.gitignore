@@ -1,5 +1,16 @@
 node_modules/
 .env
+
+# Archivos de base de datos SQLite local generados
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+prisma/*.db
+prisma/*.db-journal
+prisma/*.db-shm
+prisma/*.db-wal
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
