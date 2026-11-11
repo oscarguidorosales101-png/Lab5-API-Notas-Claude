@@ -21,7 +21,7 @@ Diseñar e implementar una API REST modular, robusta y documentada que permita g
 - **Swagger JSDoc & Swagger UI Express**: Generación interactiva de documentación OpenAPI 3.
 - **Dotenv**: Gestión de variables de entorno mediante archivos `.env`.
 - **Nodemon**: Herramienta de desarrollo para reinicio automático del servidor ante cambios de código.
-- **@anthropic-ai/sdk**: SDK oficial de Anthropic preinstalado para la integración que realizará el Integrante B.
+- **openai**: cliente compatible con la API de DeepSeek, utilizado por el Integrante B.
 
 ---
 
@@ -113,11 +113,11 @@ Contenido del archivo `.env`:
 
 ```env
 PORT=3000
-ANTHROPIC_API_KEY=
-CLAUDE_MODEL=claude-haiku-4-5-20251001
+DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=deepseek-flash
 ```
 
-> **Nota de Seguridad:** El archivo `.env` está expresamente excluido en `.gitignore` para proteger las credenciales y llaves de acceso. La variable `ANTHROPIC_API_KEY` se mantiene vacía hasta que el Integrante B configure su clave para las pruebas de IA.
+> **Nota de seguridad:** `.env` está ignorado. Configura `DEEPSEEK_API_KEY` únicamente en tu archivo local. No sobrescribas un `.env` existente ni compartas la clave por chat o capturas.
 
 ---
 
@@ -298,25 +298,6 @@ El servicio `src/services/notas.service.js` implementa un almacenamiento voláti
 
 ---
 
-## 12. Integración pendiente del Integrante B
+## 12. Integración del Integrante B con DeepSeek
 
-La base del backend queda completamente preparada y desacoplada para que el **Integrante B** desarrolle su trabajo en la rama `feature/ia`.
-
-El Integrante B encontrará disponibles y listos para usar los siguientes módulos:
-
-1. **Servicio de notas reutilizable (`src/services/notas.service.js`)**:
-   - Dispone de la función `buscarPorId(id)`, lista para ser importada por el servicio de IA para extraer el contenido de una nota antes de enviarlo a Claude para su resumen.
-2. **Middleware de validación genérico (`src/middlewares/validar.js`)**:
-   - Puede ser utilizado directamente para validar peticiones del endpoint de IA definiendo un nuevo esquema con Zod (ej. `validar(iaResumenSchema)`).
-3. **Manejo centralizado de errores extensible (`src/middlewares/errorHandler.js` y `src/utils/errors.js`)**:
-   - Permite capturar errores de la API de Anthropic o definir subclases de `AppError` (como `ClaudeAPIError`), retornando respuestas estructuradas sin caídas del servidor.
-4. **Configuración modular de Express (`src/app.js`)**:
-   - Permite registrar el nuevo enrutador de IA con una sola línea: `app.use('/api/ia', iaRoutes);`.
-5. **Swagger extensible (`src/config/swagger.js`)**:
-   - Escanea automáticamente los archivos dentro de `src/routes/`, por lo que cualquier endpoint anotado con JSDoc en las rutas del Integrante B aparecerá de inmediato en `/api-docs`.
-
-> **Pendiente para el Integrante B:**
-> - Crear `src/services/claude.service.js` con la lógica de invocación a Anthropic Claude.
-> - Crear `src/routes/ia.routes.js` con el endpoint de generación de resúmenes (e.g. `POST /api/ia/resumen`).
-> - Incorporar las anotaciones Swagger correspondientes a las operaciones de IA.
-> - Añadir la clave `ANTHROPIC_API_KEY` en su archivo local `.env`.
+La integración de preguntas y resúmenes está implementada. Consulta [configuración, contratos, pruebas y evidencias pendientes](docs/INTEGRACION-IA.md). Se conserva el CRUD del integrante A.
