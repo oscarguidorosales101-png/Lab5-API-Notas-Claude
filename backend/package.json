@@ -23,6 +23,7 @@
     "@prisma/client": "^6.19.3",
     "dotenv": "^16.4.7",
     "express": "^5.0.1",
+    "express-rate-limit": "^8.7.4",
     "openai": "^7.55.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

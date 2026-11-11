@@ -248,7 +248,7 @@ router.delete('/:id', validarParamId, async (req, res, next) => {
  *       503: { $ref: '#/components/responses/IAOcupada' }
  *       504: { $ref: '#/components/responses/IATimeout' }
  */
-router.post('/:id/resumen', validarParamId, async (req, res, next) => {
+router.post('/:id/resumen', require('../middlewares/limitarIA').limitarIA, validarParamId, async (req, res, next) => {
   try {
     const nota = await notasService.buscarPorId(req.notaId);
     if (!nota) {

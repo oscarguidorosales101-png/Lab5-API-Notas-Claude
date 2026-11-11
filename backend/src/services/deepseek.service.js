@@ -9,7 +9,7 @@ class IAError extends Error {
 
 let client;
 
-async function preguntar(texto, system = 'Eres un asistente útil. Responde en español.') {
+function obtenerCliente() {
   if (!process.env.DEEPSEEK_API_KEY?.trim() || !process.env.DEEPSEEK_MODEL?.trim()) {
     throw new IAError();
   }
@@ -19,14 +19,20 @@ async function preguntar(texto, system = 'Eres un asistente útil. Responde en e
     timeout: 30000,
     maxRetries: 0 // Una llamada por petición; evita consumo duplicado automático.
   });
+  return client;
+}
 
-  const result = await client.chat.completions.create({
+const sistemaDefault = 'Eres un asistente útil. Responde en español.';
+
+async function preguntar(texto, system = sistemaDefault, historial = []) {
+  const result = await obtenerCliente().chat.completions.create({
     model: process.env.DEEPSEEK_MODEL,
     max_tokens: 1024,
     thinking: { type: 'disabled' },
     stream: false,
     messages: [
       { role: 'system', content: system },
+      ...historial,
       { role: 'user', content: texto }
     ]
   });
@@ -42,4 +48,41 @@ async function preguntar(texto, system = 'Eres un asistente útil. Responde en e
   return { respuesta, uso };
 }
 
-module.exports = { preguntar, IAError };
+async function* preguntarStream(texto, signal) {
+  let stream;
+  try {
+    stream = await obtenerCliente().chat.completions.create({
+      model: process.env.DEEPSEEK_MODEL,
+      max_tokens: 1024,
+      thinking: { type: 'disabled' },
+      stream: true,
+      stream_options: { include_usage: true },
+      messages: [
+        { role: 'system', content: sistemaDefault },
+        { role: 'user', content: texto }
+      ]
+    }, { signal });
+    let respuesta = '';
+    let uso;
+    for await (const chunk of stream) {
+      const texto = chunk.choices?.[0]?.delta?.content;
+      if (typeof texto === 'string' && texto) {
+        respuesta += texto;
+        yield { texto };
+      }
+      if (chunk.usage) uso = chunk.usage;
+    }
+    if (!respuesta.trim() || !uso ||
+        !['prompt_tokens', 'completion_tokens', 'total_tokens'].every(
+          field => Number.isInteger(uso[field]) && uso[field] >= 0
+        )) throw new IAError();
+    yield { uso };
+  } catch (error) {
+    if (error instanceof OpenAI.APIError) throw error;
+    throw new IAError();
+  } finally {
+    stream?.controller.abort();
+  }
+}
+
+module.exports = { preguntar, preguntarStream, IAError };
