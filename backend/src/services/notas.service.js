@@ -1,64 +1,75 @@
 /**
- * Servicio de gestión de notas con almacenamiento en memoria.
- * Proporciona métodos CRUD y permite su reutilización para futuras integraciones (ej. Claude AI).
+ * Servicio de gestión de notas con persistencia en base de datos SQLite utilizando Prisma ORM.
+ * Reemplaza el almacenamiento volátil en memoria y conserva la compatibilidad con rutas existentes y futuras.
  */
 
-// Almacenamiento en memoria
-const notas = [];
-let nextId = 1;
+const prisma = require('../config/prisma');
 
 /**
- * Obtiene todas las notas almacenadas.
- * @returns {Array<{id: number, titulo: string, contenido: string}>} Lista de notas
+ * Obtiene todas las notas almacenadas en la base de datos.
+ * @returns {Promise<Array<{id: number, titulo: string, contenido: string, createdAt: Date, updatedAt: Date}>>} Lista de notas
  */
-const obtenerTodas = () => {
-  return [...notas];
+const obtenerTodas = async () => {
+  return await prisma.note.findMany({
+    orderBy: { id: 'asc' }
+  });
 };
 
 /**
  * Busca una nota por su identificador único.
  * @param {number|string} id - Identificador de la nota
- * @returns {{id: number, titulo: string, contenido: string}|null} La nota encontrada o null
+ * @returns {Promise<{id: number, titulo: string, contenido: string, createdAt: Date, updatedAt: Date}|null>} La nota encontrada o null
  */
-const buscarPorId = (id) => {
+const buscarPorId = async (id) => {
   const numericId = Number(id);
-  const nota = notas.find((n) => n.id === numericId);
-  return nota ? { ...nota } : null;
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    return null;
+  }
+
+  return await prisma.note.findUnique({
+    where: { id: numericId }
+  });
 };
 
 /**
- * Crea y almacena una nueva nota con un ID autoincremental único.
+ * Crea y almacena una nueva nota en la base de datos con un ID autoincremental único.
  * @param {Object} datos - Datos de la nota
  * @param {string} datos.titulo - Título de la nota
  * @param {string} datos.contenido - Contenido de la nota
- * @returns {{id: number, titulo: string, contenido: string}} La nota recién creada
+ * @returns {Promise<{id: number, titulo: string, contenido: string, createdAt: Date, updatedAt: Date}>} La nota creada
  */
-const crearNota = ({ titulo, contenido }) => {
-  const nuevaNota = {
-    id: nextId++,
-    titulo: titulo.trim(),
-    contenido: contenido.trim()
-  };
-
-  notas.push(nuevaNota);
-  return { ...nuevaNota };
+const crearNota = async ({ titulo, contenido }) => {
+  return await prisma.note.create({
+    data: {
+      titulo: titulo.trim(),
+      contenido: contenido.trim()
+    }
+  });
 };
 
 /**
  * Elimina una nota por su identificador único.
  * @param {number|string} id - Identificador de la nota
- * @returns {boolean} true si se eliminó con éxito, false si no se encontró
+ * @returns {Promise<boolean>} true si se eliminó con éxito, false si no se encontró
  */
-const eliminarNota = (id) => {
+const eliminarNota = async (id) => {
   const numericId = Number(id);
-  const index = notas.findIndex((n) => n.id === numericId);
-
-  if (index === -1) {
+  if (!Number.isInteger(numericId) || numericId <= 0) {
     return false;
   }
 
-  notas.splice(index, 1);
-  return true;
+  try {
+    await prisma.note.delete({
+      where: { id: numericId }
+    });
+    return true;
+  } catch (error) {
+    // Código de error Prisma P2025: "Record to delete does not exist."
+    if (error.code === 'P2025') {
+      return false;
+    }
+    throw error;
+  }
 };
 
 module.exports = {
