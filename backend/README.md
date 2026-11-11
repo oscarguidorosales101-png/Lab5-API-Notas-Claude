@@ -1,416 +1,279 @@
-# Laboratorio #5 — API de notas con Express, Swagger y DeepSeek
+# Laboratorio #5 — Sistema de Gestión Académica y API REST con Express 5, Prisma y MySQL
 
-API REST profesional desarrollada con **Node.js** y **Express 5**, persistencia relacional con **Prisma ORM y SQLite**, documentada con **Swagger/OpenAPI 3**, con validación de esquemas mediante **Zod**, seguimiento analítico de consumo/costos de IA y pruebas automatizadas con **Supertest**.
+API REST profesional y modular desarrollada con **Node.js** y **Express 5**, persistencia relacional empresarial en **MySQL** (`Notas_lab`) gestionada mediante **Prisma ORM (v6)**, documentada interactivamente con **Swagger/OpenAPI 3**, con validación de esquemas estricta mediante **Zod**, seguimiento analítico de consumo y costos de IA con **DeepSeek**, y suite exhaustiva de pruebas automatizadas con **Supertest**.
 
-El backend integra el trabajo del **Integrante A** (`feature/notas`: API de notas, persistencia SQLite con Prisma, sistema de costos de IA y suite Supertest) y del **Integrante B** (`feature/ia`: integración con IA). La guía original utiliza Claude; este proyecto adapta la integración a **DeepSeek**.
-
-Nombres de los integrantes: pendientes de completar por el equipo. No se deducen de las cuentas de Git.
+El proyecto integra de manera armónica el trabajo del **Integrante A** (`feature/notas`: arquitectura modular, modelo de datos relacional académico, servicios y endpoints de usuarios, materias, prerrequisitos, períodos, matrículas, calificaciones, temas y notas, migración de datos desde SQLite, sistema analítico de costos y suite de pruebas) y del **Integrante B** (`feature/ia`: integración con DeepSeek AI, streaming y control de conversaciones).
 
 ---
 
-## 1. Objetivo del Laboratorio
-
-Diseñar e implementar una API REST modular, persistente y documentada para gestionar notas en SQLite, responder preguntas y resumir notas mediante DeepSeek, calcular y auditar los costos de tokens consumidos, y garantizar la calidad del software mediante una suite de pruebas automatizadas aisladas. El cliente se comunica con Express; únicamente el backend accede al proveedor de IA, a la base de datos y a las credenciales privadas.
-
----
-
-## 2. Tecnologías Utilizadas
+## 1. Arquitectura y Tecnologías
 
 - **Node.js**: Entorno de ejecución JavaScript (v20+ requerido, probado en v24+).
-- **Express 5**: Framework web minimalista y robusto para Node.js.
+- **Express 5**: Framework web minimalista, veloz y robusto para Node.js.
 - **CommonJS**: Sistema estándar de módulos (`require` / `module.exports`).
-- **Prisma ORM (v6)**: Mapeador objeto-relacional para modelado, cliente tipado y migraciones.
-- **SQLite**: Motor de base de datos relacional ligero, embebido y sin dependencias de servicios externos.
-- **Zod**: Biblioteca de declaración y validación estricta de esquemas.
-- **Swagger JSDoc & Swagger UI Express**: Generación interactiva de documentación OpenAPI 3.
-- **Supertest**: Biblioteca para pruebas de integración de endpoints HTTP contra Express.
-- **Dotenv**: Gestión de variables de entorno mediante archivos `.env`.
-- **Nodemon**: Herramienta de desarrollo para reinicio automático del servidor ante cambios de código.
-- **openai**: Cliente oficial compatible con la API de DeepSeek, utilizado por el Integrante B.
+- **Prisma ORM (v6)**: ORM tipado para MySQL con migraciones declarativas y transacciones atómicas.
+- **MySQL 8.0**: Motor de base de datos relacional activo (`Notas_lab` para desarrollo, `Notas_lab_test` para pruebas).
+- **SQLite (Respaldo Histórico)**: Conservado en `prisma/legacy-sqlite/` como histórico y alternativa técnica futura.
+- **Zod**: Declaración de esquemas y validación rigurosa de entradas y parámetros HTTP.
+- **Swagger JSDoc & Swagger UI Express**: Documentación interactiva OpenAPI 3 en `/api-docs` y esquema en `/api-docs.json`.
+- **Supertest**: Pruebas de integración de endpoints HTTP contra Express en base de datos aislada.
+- **Dotenv**: Configuración segura de variables de entorno mediante `.env`.
+- **openai**: SDK compatible con la API de DeepSeek para inferencia y streaming de IA.
 
 ---
 
-## 3. Responsabilidad del Integrante A
+## 2. Requisitos Previos
 
-El **Integrante A** tiene bajo su responsabilidad:
-- Configuración inicial del proyecto backend, dependencias y arquitectura modular.
-- Implementación del servicio y rutas del CRUD de notas.
-- **Reto 1 — Sistema de Costos y Consumo de IA:** Registro persistente de tokens consumidos por operación, fórmulas de cálculo de costo de entrada/salida/total, cálculo diario por zona horaria y endpoints analíticos (`/api/ia/uso`, `/api/ia/uso/hoy`, `/api/ia/uso/resumen`).
-- **Reto 2 — Persistencia con Prisma y SQLite:** Sustitución del almacenamiento volátil en memoria por base de datos SQLite con Prisma ORM (modelos `Note` y `AIUsage`, migraciones y cliente singleton).
-- **Reto 3 — Pruebas Automatizadas con Supertest:** Suite completa de pruebas de integración con Supertest, aislamiento en base de datos SQLite de pruebas (`test.db`) y simulación estricta de DeepSeek sin llamadas reales a internet ni consumo de créditos.
-- Sistema centralizado y extensible de manejo de errores HTTP y operacionales.
-- Documentación OpenAPI 3 / Swagger interactiva y actualizada para todos los endpoints.
+- **Node.js**: Versión 20.x o superior (Node 24 recomendado).
+- **MySQL Server**: Versión 8.0 o superior en ejecución local (puerto 3306).
+- **npm**: Gestor de paquetes de Node.js.
 
 ---
 
-## 4. Estructura del Backend
+## 3. Instalación y Configuración Paso a Paso
 
-```text
-backend/
-│
-├── prisma/
-│   ├── migrations/             # Historial de migraciones SQL gestionadas por Prisma
-│   │   └── 20261111170243_init/
-│   │       └── migration.sql
-│   ├── dev.db                  # Base de datos SQLite local de desarrollo (ignorado por Git)
-│   ├── test.db                 # Base de datos SQLite aislada de pruebas (ignorado por Git)
-│   └── schema.prisma           # Definición de modelos Note y AIUsage
-│
-├── src/
-│   ├── config/
-│   │   ├── prisma.js           # Cliente singleton de Prisma ORM
-│   │   └── swagger.js          # Configuración de OpenAPI 3 y Swagger UI
-│   │
-│   ├── routes/
-│   │   ├── notas.routes.js     # CRUD de notas y endpoint de resumen
-│   │   └── ia.routes.js        # Preguntas con DeepSeek y endpoints de costos de IA
-│   │
-│   ├── services/
-│   │   ├── notas.service.js    # CRUD de notas con persistencia en SQLite via Prisma
-│   │   ├── costos.service.js   # Registro, fórmulas y analítica de consumo de IA
-│   │   └── deepseek.service.js # Cliente y llamadas a DeepSeek
-│   │
-│   ├── middlewares/
-│   │   ├── validar.js          # Middleware reutilizable de validación con Zod
-│   │   └── errorHandler.js     # Manejo centralizado y seguro de errores
-│   │
-│   ├── utils/
-│   │   └── errors.js           # Clases personalizadas de error (AppError, NotFoundError, etc.)
-│   │
-│   ├── app.js                  # Configuración de la aplicación Express y middlewares
-│   └── index.js                # Inicialización del servidor HTTP y variables de entorno
-│
-├── test/
-│   ├── ia.test.js              # Pruebas unitarias de IA (Integrante B)
-│   └── retos-a.test.js         # Suite de pruebas Supertest y Prisma (Integrante A)
-│
-├── docs/                       # Documentación técnica adicional de integración
-│   ├── INTEGRACION-IA.md
-│   └── PR-IA.md
-│
-├── .env                        # Variables de entorno locales (ignorado por Git)
-├── .env.example                # Plantilla de variables de entorno para el equipo
-├── .gitignore                  # Exclusión de node_modules, .env y *.db
-├── package.json                # Dependencias y scripts npm
-├── package-lock.json           # Árbol de dependencias bloqueado
-└── README.md                   # Documentación técnica del backend
-```
-
----
-
-## 5. Requisitos de Instalación
-
-- **Node.js** >= 20.0.0
-- **npm** >= 9.0.0
-
-Comprobar versiones instaladas:
-
+### 3.1 Clonar el repositorio y acceder a backend
 ```bash
-node -v
-npm -v
+git clone <URL_DEL_REPOSITORIO>
+cd Lab5-API-Notas-Claude/backend
 ```
 
----
-
-## 6. Instalación y Configuración
-
-1. Navegar hasta la carpeta `backend`:
-
-```bash
-cd backend
-```
-
-2. Instalar las dependencias del proyecto:
-
+### 3.2 Instalar dependencias
 ```bash
 npm install
 ```
 
-3. Si todavía no existe `.env`, crearlo desde la plantilla:
+### 3.3 Crear las Bases de Datos en MySQL
+Conéctese a su servidor MySQL local y ejecute:
+```sql
+CREATE DATABASE IF NOT EXISTS `Notas_lab`
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
 
-```powershell
-if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+CREATE DATABASE IF NOT EXISTS `Notas_lab_test`
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
 ```
 
-Contenido del archivo `.env`:
-
+### 3.4 Configuración de Variables de Entorno (`.env`)
+Copie la plantilla de ejemplo:
+```bash
+cp .env.example .env
+```
+Edite `.env` con las credenciales de su MySQL local:
 ```env
 PORT=3000
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="mysql://root:su_contrasena@localhost:3306/Notas_lab"
+TEST_DATABASE_URL="mysql://root:su_contrasena@localhost:3306/Notas_lab_test"
 
 # Proveedor de IA (DeepSeek)
-DEEPSEEK_API_KEY=
+DEEPSEEK_API_KEY=su_clave_api_aqui
 DEEPSEEK_MODEL=deepseek-flash
 
-# Tarifas configurables para estimación de costos (precio por millón de tokens en USD)
+# Tarifas configurables para estimación de costos (USD por millón de tokens)
 AI_PRICE_PER_MILLION_INPUT_TOKENS=0.14
 AI_PRICE_PER_MILLION_OUTPUT_TOKENS=0.28
 
-# Zona horaria para el cálculo del resumen diario (ej. America/Costa_Rica o UTC)
+# Zona horaria para el cálculo del resumen diario
 TIMEZONE=America/Costa_Rica
 ```
 
-> **Nota de seguridad:** El archivo `.env` está expresamente excluido en `.gitignore`. Configura `DEEPSEEK_API_KEY` únicamente en tu archivo local. Nunca compartas claves por chat, repositorios ni capturas.
-
-4. Inicializar y sincronizar la base de datos SQLite con Prisma:
-
+### 3.5 Aplicar Migraciones de Prisma
+Aplica las migraciones iniciales de MySQL a la base de datos `Notas_lab`:
 ```bash
 npx prisma migrate dev
 ```
 
----
-
-## 7. Ejecución del Servidor
-
-### Modo Desarrollo (con reinicio automático via Nodemon):
-
+### 3.6 Sincronizar Base de Datos de Pruebas
+Sincroniza el esquema relacional en la base de datos aislada de pruebas:
 ```bash
-npm run dev
+npx prisma db push --schema=prisma/schema.prisma
 ```
 
-### Modo Producción:
-
+### 3.7 Migración de Datos Históricos desde SQLite
+Transfiere los registros históricos de `Note` y `AIUsage` preservando identificadores y campos:
 ```bash
-npm start
+npm run migrate:sqlite
+```
+*Este script es 100% seguro e idempotente; no duplica datos si se ejecuta varias veces.*
+
+### 3.8 Poblar Datos de Prueba (Seed Idempotente)
+Carga datos académicos de demostración (usuarios, materias, prerrequisitos, matrículas y temas):
+```bash
+npm run seed
 ```
 
-El servidor iniciará en el puerto configurado (por defecto `3000`):
-
-```text
-====================================================
-🚀 Servidor ejecutándose en: http://localhost:3000
-📚 Documentación Swagger en: http://localhost:3000/api-docs
-====================================================
-```
+### 3.9 Iniciar el Servidor
+- Modo desarrollo (con recarga automática mediante Nodemon):
+  ```bash
+  npm run dev
+  ```
+- Modo producción:
+  ```bash
+  npm start
+  ```
+El servidor quedará disponible en `http://localhost:3000`.
 
 ---
 
-## 8. Documentación Interactiva con Swagger
+## 4. Documentación Interactiva (Swagger / OpenAPI)
 
-La documentación OpenAPI 3 se encuentra accesible en el navegador en la siguiente URL:
-
-```text
-http://localhost:3000/api-docs
-```
-
-También se dispone del esquema OpenAPI en formato JSON en:
-
-```text
-http://localhost:3000/api-docs.json
-```
-
-Desde Swagger UI se pueden inspeccionar y probar interactivamente las operaciones del CRUD de Notas, Preguntas, Resúmenes y Endpoints de Costos de IA.
+Una vez iniciado el servidor, acceda a la documentación visual interactiva:
+- **Swagger UI**: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+- **Especificación OpenAPI (JSON)**: [http://localhost:3000/api-docs.json](http://localhost:3000/api-docs.json)
 
 ---
 
-## 9. Endpoints REST Disponibles
+## 5. Catálogo Completo de Endpoints REST
 
-### Notas (CRUD en SQLite con Prisma)
-
-| Método | Endpoint | Descripción | Códigos HTTP |
+### 5.1 Usuarios (`/api/usuarios`)
+| Método | Ruta | Descripción | Códigos HTTP |
 |---|---|---|---|
-| `GET` | `/api/notas` | Obtener todas las notas registradas | 200 |
-| `GET` | `/api/notas/:id` | Obtener una nota específica por su ID numérico | 200, 400, 404 |
-| `POST` | `/api/notas` | Crear una nueva nota persistida en SQLite | 201, 400 |
-| `DELETE` | `/api/notas/:id` | Eliminar una nota existente de la base de datos | 204, 400, 404 |
+| `GET` | `/api/usuarios` | Lista todos los usuarios (excluyendo contraseñas) | 200, 500 |
+| `GET` | `/api/usuarios/:id` | Detalle del usuario con matrículas y notas asociadas | 200, 400, 404 |
+| `POST` | `/api/usuarios` | Crea un usuario (`ADMIN`, `DOCENTE`, `ESTUDIANTE`) con contraseña hasheada | 201, 400, 409 |
+| `PUT` | `/api/usuarios/:id` | Actualiza los datos de un usuario existente | 200, 400, 404, 409 |
+| `DELETE` | `/api/usuarios/:id` | Elimina un usuario | 204, 400, 404 |
+| `GET` | `/api/usuarios/:id/matriculas` | Consulta el historial de matrículas y calificaciones de un estudiante | 200, 400, 404 |
 
-### Inteligencia Artificial (DeepSeek)
-
-| Método | Endpoint | Descripción | Códigos HTTP |
+### 5.2 Materias y Prerrequisitos (`/api/materias`)
+| Método | Ruta | Descripción | Códigos HTTP |
 |---|---|---|---|
-| `POST` | `/api/ia/preguntar` | Responder preguntas con DeepSeek y registrar consumo | 200, 400, 429, 502, 503, 504 |
-| `POST` | `/api/notas/:id/resumen` | Resumir una nota existente en 3 viñetas y registrar consumo | 200, 400, 404, 429, 502, 503, 504 |
+| `GET` | `/api/materias` | Lista todas las materias con sus prerrequisitos y temas | 200, 500 |
+| `GET` | `/api/materias/:id` | Detalle de la materia con relaciones académicas | 200, 400, 404 |
+| `POST` | `/api/materias` | Registra una nueva materia académica (código único, créditos, nota mínima) | 201, 400, 409 |
+| `PUT` | `/api/materias/:id` | Actualiza la información de una materia | 200, 400, 404, 409 |
+| `DELETE` | `/api/materias/:id` | Elimina una materia | 204, 400, 404 |
+| `GET` | `/api/materias/:id/prerrequisitos` | Lista los prerrequisitos asignados a una materia | 200, 400, 404 |
+| `POST` | `/api/materias/:id/prerrequisitos` | Asigna un prerrequisito (previene reflexividad y ciclos directos) | 201, 400, 404, 409 |
+| `DELETE` | `/api/materias/:id/prerrequisitos/:prerrequisitoId` | Elimina la relación de prerrequisito | 204, 400, 404 |
+| `GET` | `/api/materias/:id/temas` | Lista los temas académicos asociados a la materia | 200, 400, 404 |
 
-### Analítica de Costos y Consumo de IA (Reto 1)
-
-| Método | Endpoint | Descripción | Códigos HTTP |
+### 5.3 Períodos Académicos (`/api/periodos`)
+| Método | Ruta | Descripción | Códigos HTTP |
 |---|---|---|---|
-| `GET` | `/api/ia/uso` | Historial paginado de solicitudes, tokens y costos | 200 |
-| `GET` | `/api/ia/uso/hoy` | Resumen acumulado del día según zona horaria configurable | 200 |
-| `GET` | `/api/ia/uso/resumen` | Métricas y estadísticas globales consolidadas | 200 |
+| `GET` | `/api/periodos` | Lista todos los períodos académicos ordenados cronológicamente | 200, 500 |
+| `GET` | `/api/periodos/:id` | Obtiene un período académico por ID | 200, 400, 404 |
+| `POST` | `/api/periodos` | Crea un período lectivo con fechas de inicio/fin y estado activo | 201, 400 |
+| `PUT` | `/api/periodos/:id` | Actualiza un período académico | 200, 400, 404 |
+| `DELETE` | `/api/periodos/:id` | Elimina un período académico | 204, 400, 404 |
+
+### 5.4 Matrículas (`/api/matriculas`)
+| Método | Ruta | Descripción | Códigos HTTP |
+|---|---|---|---|
+| `GET` | `/api/matriculas` | Lista todas las matrículas con estudiante, materia y período | 200, 500 |
+| `GET` | `/api/matriculas/:id` | Detalle de la matrícula con lista de calificaciones | 200, 400, 404 |
+| `POST` | `/api/matriculas` | Matricula un estudiante validando rol, período activo, unicidad y aprobación de prerrequisitos | 201, 400, 404, 409 |
+| `GET` | `/api/matriculas/:id/calificaciones` | Lista las evaluaciones y notas de la matrícula | 200, 400, 404 |
+| `POST` | `/api/matriculas/:id/calificaciones` | Registra una evaluación y recalcula la nota ponderada en transacción | 201, 400, 404, 409 |
+| `GET` | `/api/matriculas/:id/resultado-final` | Detalle del cálculo final ponderado y estado académico | 200, 400, 404 |
+
+### 5.5 Calificaciones (`/api/calificaciones`)
+| Método | Ruta | Descripción | Códigos HTTP |
+|---|---|---|---|
+| `PUT` | `/api/calificaciones/:id` | Actualiza puntaje o ponderación de una evaluación y recalcula nota | 200, 400, 404, 409 |
+| `DELETE` | `/api/calificaciones/:id` | Elimina una evaluación y actualiza la matrícula en transacción | 204, 400, 404 |
+
+### 5.6 Temas Académicos (`/api/temas`)
+| Método | Ruta | Descripción | Códigos HTTP |
+|---|---|---|---|
+| `GET` | `/api/temas` | Lista temas (filtro opcional por `materiaId`) | 200, 500 |
+| `GET` | `/api/temas/:id` | Detalle de un tema con materia y notas asociadas | 200, 400, 404 |
+| `POST` | `/api/temas` | Registra un tema académico para una asignatura | 201, 400, 404 |
+| `PUT` | `/api/temas/:id` | Actualiza un tema académico | 200, 400, 404 |
+| `DELETE` | `/api/temas/:id` | Elimina un tema académico | 204, 400, 404 |
+
+### 5.7 Notas Académicas (`/api/notas`)
+| Método | Ruta | Descripción | Códigos HTTP |
+|---|---|---|---|
+| `GET` | `/api/notas` | Lista notas con filtros avanzados (`userId`, `subjectId`, `topicId`, `search`) | 200, 500 |
+| `GET` | `/api/notas/:id` | Detalle de la nota con relaciones académicas | 200, 400, 404 |
+| `POST` | `/api/notas` | Crea una nota (soporta vinculación opcional a estudiante, materia y tema) | 201, 400 |
+| `DELETE` | `/api/notas/:id` | Elimina una nota por ID | 204, 400, 404 |
+| `POST` | `/api/notas/:id/resumen` | Genera resumen de tres viñetas mediante DeepSeek y audita tokens | 200, 404, 502, 504 |
+
+### 5.8 Inteligencia Artificial y Costos (`/api/ia`)
+| Método | Ruta | Descripción | Códigos HTTP |
+|---|---|---|---|
+| `POST` | `/api/ia/preguntar` | Envía una consulta a DeepSeek y registra persistencia de consumo | 200, 400, 429, 502, 504 |
+| `GET` | `/api/ia/uso` | Historial paginado de solicitudes con tokens y costos | 200, 500 |
+| `GET` | `/api/ia/uso/hoy` | Consumo acumulado diario en zona horaria configurada | 200, 500 |
+| `GET` | `/api/ia/uso/resumen` | Métricas acumuladas y desglose por tipo de operación | 200, 500 |
 
 ---
 
-## 10. Reto 1 — Sistema de Seguimiento de Costos y Consumo de IA
+## 6. Modelo de Datos Relacional en Prisma
 
-### 10.1 Fórmulas de Cálculo
-
-Cada solicitud exitosa procesada por DeepSeek devuelve en el objeto `uso` los contadores reales:
-- `tokensEntrada` (`prompt_tokens`).
-- `tokensSalida` (`completion_tokens`).
-- `totalTokens` (`total_tokens`).
-
-Las fórmulas implementadas en `src/services/costos.service.js` son:
-
-$$\text{Costo Entrada} = \left(\frac{\text{Tokens Entrada}}{1\,000\,000}\right) \times \text{Precio por Millón de Entrada}$$
-
-$$\text{Costo Salida} = \left(\frac{\text{Tokens Salida}}{1\,000\,000}\right) \times \text{Precio por Millón de Salida}$$
-
-$$\text{Costo Total} = \text{Costo Entrada} + \text{Costo Salida}$$
-
-### 10.2 Configuración de Tarifas
-
-Las tarifas son completamente configurables mediante variables de entorno en el archivo `.env`:
-
-```env
-AI_PRICE_PER_MILLION_INPUT_TOKENS=0.14
-AI_PRICE_PER_MILLION_OUTPUT_TOKENS=0.28
-TIMEZONE=America/Costa_Rica
+```mermaid
+erDiagram
+    User ||--o{ Enrollment : "matricula"
+    User ||--o{ Note : "escribe"
+    Subject ||--o{ SubjectPrerequisite : "tiene_prerrequisitos"
+    Subject ||--o{ SubjectPrerequisite : "es_prerrequisito_de"
+    Subject ||--o{ Enrollment : "inscribe"
+    Subject ||--o{ NoteTopic : "clasifica_en"
+    Subject ||--o{ Note : "referencia"
+    AcademicPeriod ||--o{ Enrollment : "contiene"
+    Enrollment ||--o{ Grade : "evalua"
+    NoteTopic ||--o{ Note : "organiza"
 ```
 
-- **Valores de referencia:** DeepSeek maneja tarifas estándar aproximadas de \$0.14 por millón de tokens de entrada (cache miss) y \$0.28 por millón de tokens de salida.
-- **Precisión:** Las operaciones numéricas conservan precisión flotante completa en base de datos (`Float` / `Double` de 8 decimales) y se presentan redondeadas a 6 decimales para evitar acumulación de errores por truncado.
-- **Integridad:** Ante fallos de proveedor (errores 401, 429, 503, 504) **no** se registran consumos ficticios.
-
-### 10.3 Resumen Diario por Zona Horaria
-
-El endpoint `GET /api/ia/uso/hoy` determina el inicio del día (`00:00:00.000`) y el final (`23:59:59.999`) según la zona horaria IANA configurada (ej. `America/Costa_Rica`), convirtiéndola a instantes UTC para consultar SQLite. Registros de días previos quedan automáticamente aislados y no alteran la métrica diaria.
-
-**Ejemplo de respuesta (`GET /api/ia/uso/hoy`):**
-
-```json
-{
-  "fecha": "2026-11-11",
-  "zonaHoraria": "America/Costa_Rica",
-  "totalSolicitudes": 3,
-  "totalTokensEntrada": 120,
-  "totalTokensSalida": 350,
-  "totalTokens": 470,
-  "costoAcumuladoEntrada": 0.000017,
-  "costoAcumuladoSalida": 0.000098,
-  "gastoTotalEstimado": 0.000115,
-  "solicitudes": []
-}
-```
+### Entidades Principales
+1. **User**: Almacena usuarios con contraseña hasheada (SHA-256). Roles: `ADMIN`, `DOCENTE`, `ESTUDIANTE`.
+2. **Subject**: Asignaturas académicas con `codigo` único, `creditos` y `notaMinimaAprobatoria` (por defecto 70.0).
+3. **SubjectPrerequisite**: Relación autorreferenciada muchos a muchos entre materias.
+4. **AcademicPeriod**: Períodos o ciclos lectivos (`anio`, `periodo`, `activo`).
+5. **Enrollment**: Matrícula única por `(userId, subjectId, academicPeriodId)`, con `estado` (`ACTIVA`, `APROBADA`, `REPROBADA`) y `notaFinal`.
+6. **Grade**: Evaluaciones de una matrícula con `puntajeObtenido`, `puntajeMaximo`, `porcentaje` (ponderación) y observaciones.
+7. **NoteTopic**: Categorización temática de las asignaturas (ej. Álgebra, Estructura Atómica).
+8. **Note**: Apuntes académicos con soporte para filtros por materia, tema y estudiante.
+9. **AIUsage**: Registro de auditoría para cada petición de IA (`requestId`, `tipoOperacion`, tokens reales de entrada/salida y costos calculados en USD).
 
 ---
 
-## 11. Reto 2 — Persistencia con Prisma ORM y SQLite
+## 7. Reglas de Negocio Académicas
 
-Se sustituyó el almacenamiento volátil en memoria por una base de datos relacional SQLite gestionada mediante Prisma ORM.
+1. **Matrículas y Prerrequisitos:**
+   - Únicamente usuarios con rol `ESTUDIANTE` pueden matricular asignaturas.
+   - El período académico debe existir y tener `activo: true`.
+   - No se permiten matrículas duplicadas para el mismo estudiante, materia y período (código 409).
+   - **Verificación Estricta de Prerrequisitos:** Para matricular una materia con prerrequisitos, el estudiante debe contar con matrícula previa en cada una de las materias requisito con estado `APROBADA` o `notaFinal >= notaMinimaAprobatoria`. En caso de incumplimiento, se rechaza la matrícula (HTTP 409) detallando las materias pendientes.
 
-### 11.1 Modelos del Esquema (`prisma/schema.prisma`)
+2. **Calificaciones Ponderadas y Transacciones:**
+   - Cada evaluación valida que `puntajeObtenido <= puntajeMaximo` y `puntajeMaximo > 0`.
+   - La suma acumulada de las ponderaciones (`porcentaje`) para una matrícula no puede superar el 100%.
+   - Cada inserción, actualización o eliminación de calificación se ejecuta en una **transacción atómica de Prisma**, recalculando la nota final:
+     $$\text{Nota Final} = \sum \left(\frac{\text{Puntaje Obtenido}}{\text{Puntaje Máximo}} \times \text{Ponderación}\right)$$
+   - Al completar el 100% de la evaluación, la matrícula transiciona automáticamente a estado `APROBADA` o `REPROBADA` según la nota mínima establecida por la materia.
 
-```prisma
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-model Note {
-  id        Int      @id @default(autoincrement())
-  titulo    String
-  contenido String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model AIUsage {
-  id            Int      @id @default(autoincrement())
-  requestId     String?
-  tipoOperacion String   // "pregunta" | "resumen"
-  modelo        String
-  tokensEntrada Int
-  tokensSalida  Int
-  totalTokens   Int
-  costoEntrada  Float
-  costoSalida   Float
-  costoTotal    Float
-  createdAt     DateTime @default(now())
-}
-```
-
-### 11.2 Comandos Útiles de Prisma
-
-- **Generar cliente:** `npx prisma generate` (o `npm run prisma:generate`)
-- **Crear y aplicar migraciones en desarrollo:** `npx prisma migrate dev` (o `npm run prisma:migrate`)
-- **Aplicar migraciones en producción:** `npx prisma migrate deploy`
-- **Explorador visual de datos:** `npx prisma studio` (o `npm run prisma:studio` en `http://localhost:5555`)
-- **Sincronizar base de datos de pruebas:** `npx prisma db push`
-
-### 11.3 Persistencia Garantizada
-
-- El cliente de Prisma está configurado como Singleton en `src/config/prisma.js` para evitar fugas de conexiones.
-- Al reiniciar el proceso de Node.js, las notas y el historial de consumo de IA permanecen intactos en `prisma/dev.db`.
-- Los archivos `.db`, `.db-journal`, `.db-shm` y `.db-wal` están debidamente ignorados por Git para no versionar datos locales.
+3. **Organización Temática de Apuntes:**
+   - Cada estudiante puede clasificar sus notas bajo materias y temas específicos.
+   - La API permite consultar notas mediante filtros en query parameters (`GET /api/notas?userId=1&subjectId=2&topicId=1`).
 
 ---
 
-## 12. Reto 3 — Pruebas Automatizadas con Supertest
+## 8. Fórmulas de Costos de IA (DeepSeek)
 
-Se incorporó una suite de pruebas de integración con **Supertest** en `test/retos-a.test.js`, que se ejecuta junto a la suite de IA de Integrante B (`test/ia.test.js`) mediante el runner nativo de Node.js (`node --test`).
+Se registran los tokens reales reportados por el proveedor y se calculan los costos según las tarifas configuradas en `.env`:
+- **Costo Entrada (USD):**
+  $$\text{Costo Entrada} = \frac{\text{tokensEntrada}}{1\,000\,000} \times \text{AI\_PRICE\_PER\_MILLION\_INPUT\_TOKENS}$$
+- **Costo Salida (USD):**
+  $$\text{Costo Salida} = \frac{\text{tokensSalida}}{1\,000\,000} \times \text{AI\_PRICE\_PER\_MILLION\_OUTPUT\_TOKENS}$$
+- **Costo Total (USD):**
+  $$\text{Costo Total} = \text{Costo Entrada} + \text{Costo Salida}$$
 
-### 12.1 Cobertura de la Suite
+---
 
-1. **CRUD y Validaciones Zod:**
-   - Creación exitosa (HTTP 201) y verificación de persistencia en SQLite.
-   - Listado ordenado (HTTP 200).
-   - Consulta por ID existente (HTTP 200).
-   - Consulta de ID inexistente (HTTP 404).
-   - Rechazo de cuerpos vacíos, títulos vacíos y textos > 5000 caracteres (HTTP 400).
-   - Eliminación exitosa (HTTP 204) y comprobación de ausencia posterior (HTTP 404).
-   - Validación de tipos de datos incorrectos.
-2. **Simulación de IA con Mocks Controlados:**
-   - Respuesta de pregunta y confirmación de guardado en la tabla `AIUsage`.
-   - Respuesta de resumen sobre nota real persistida y confirmación de guardado en `AIUsage`.
-   - Errores de autenticación (401 $\rightarrow$ 502) verificando que **no** se creen consumos ficticios.
-   - Control de límites de tasa (429), timeouts simulados (504), respuestas vacías (502) y caídas de servicio (503).
-   - Ausencia de credenciales produciendo 502 sin emitir tráfico de red.
-3. **Cálculo y Analítica de Costos:**
-   - Comprobación matemática exacta de las fórmulas de costos.
-   - Paginación del historial `GET /api/ia/uso`.
-   - Acumulación diaria `GET /api/ia/uso/hoy`.
-   - Aislamiento temporal: registros de días anteriores no contaminan la suma de hoy.
-   - Métricas globales y desglose por tipo de operación `GET /api/ia/uso/resumen`.
-4. **Aislamiento de Persistencia:**
-   - La suite utiliza una base de datos SQLite aislada de pruebas (`test.db`), sin tocar ni borrar `dev.db`.
-   - Ninguna prueba realiza llamadas reales a DeepSeek ni gasta créditos del usuario.
+## 9. Pruebas Automatizadas
 
-### 12.2 Ejecución de Pruebas
+El backend incluye una suite completa de pruebas de integración con el test runner nativo de Node.js y **Supertest**.
 
+Para ejecutar todas las pruebas:
 ```bash
 npm test
 ```
 
-**Resultado de la última ejecución oficial:**
-
-```text
-ℹ tests 34
-ℹ suites 5
-ℹ pass 34
-ℹ fail 0
-ℹ cancelled 0
-ℹ skipped 0
-ℹ todo 0
-```
-
----
-
-## 13. Preparación de una Instalación Limpia
-
-Para clonar y poner en marcha el proyecto desde cero en una máquina nueva:
-
-```bash
-# 1. Clonar el repositorio
-git clone <url-del-repositorio>
-cd Lab5-API-Notas-Claude/backend
-
-# 2. Instalar dependencias
-npm install
-
-# 3. Configurar variables de entorno
-cp .env.example .env
-
-# 4. Aplicar migraciones para crear la base de datos SQLite
-npx prisma migrate dev
-
-# 5. Ejecutar la suite de pruebas
-npm test
-
-# 6. Iniciar el servidor
-npm run dev
-```
+### Características de la Suite de Pruebas:
+- **Aislamiento Total:** Las pruebas se ejecutan exclusivamente contra la base de datos `Notas_lab_test` definida en `TEST_DATABASE_URL`, garantizando que la base de desarrollo `Notas_lab` jamás se contamine ni se borre.
+- **Cero Gasto de Créditos de IA:** Las llamadas a DeepSeek son interceptadas mediante mocks en memoria; no se realizan peticiones externas a internet ni se consumen tokens reales.
+- **Cobertura Completa:** 55 pruebas automatizadas organizadas en 6 suites que verifican CRUD de notas, persistencia en MySQL, transferencia de datos SQLite, CRUD de usuarios, materias, prerrequisitos, matrículas, calificaciones ponderadas, organización por temas, auditoría de AIUsage, resumen diario por zona horaria y compatibilidad con las rutas del Integrante B.

@@ -47,7 +47,7 @@ const validarParamId = (req, res, next) => {
  */
 router.get('/', async (req, res, next) => {
   try {
-    const notas = await notasService.obtenerTodas();
+    const notas = await notasService.obtenerTodas(req.query);
     res.status(200).json(notas);
   } catch (error) {
     next(error);

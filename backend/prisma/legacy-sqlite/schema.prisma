@@ -1,0 +1,31 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Note {
+  id        Int      @id @default(autoincrement())
+  titulo    String
+  contenido String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AIUsage {
+  id            Int      @id @default(autoincrement())
+  requestId     String?
+  tipoOperacion String
+  modelo        String
+  tokensEntrada Int
+  tokensSalida  Int
+  totalTokens   Int
+  costoEntrada  Float
+  costoSalida   Float
+  costoTotal    Float
+  createdAt     DateTime @default(now())
+}
+

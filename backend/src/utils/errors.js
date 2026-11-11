@@ -6,7 +6,7 @@
 class AppError extends Error {
   /**
    * @param {string} message - Mensaje descriptivo del error
-   * @param {number} statusCode - Código de estado HTTP (400, 404, 500, etc.)
+   * @param {number} statusCode - Código de estado HTTP (400, 404, 409, 500, etc.)
    * @param {Array|null} detalles - Información adicional o lista de fallos
    */
   constructor(message, statusCode = 500, detalles = null) {
@@ -31,6 +31,12 @@ class NotFoundError extends AppError {
   }
 }
 
+class ConflictError extends AppError {
+  constructor(message = 'Conflicto con el estado actual del recurso', detalles = null) {
+    super(message, 409, detalles);
+  }
+}
+
 class ValidationError extends AppError {
   constructor(message = 'Error de validación', detalles = []) {
     super(message, 400, detalles);
@@ -41,5 +47,6 @@ module.exports = {
   AppError,
   BadRequestError,
   NotFoundError,
+  ConflictError,
   ValidationError
 };

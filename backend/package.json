@@ -1,21 +1,28 @@
 {
   "name": "lab5-api-notas-claude-backend",
   "version": "1.0.0",
-  "description": "Backend API REST para gestión de notas con Express 5, Swagger, Zod y almacenamiento en memoria",
+  "description": "Backend API REST para gestión de notas y sistema académico con Express 5, Swagger, Zod, Prisma ORM y MySQL",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "test": "node --test --test-concurrency=1",
+    "seed": "node prisma/seed.js",
+    "migrate:sqlite": "node scripts/migrate-sqlite-to-mysql.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "keywords": [
     "express",
     "rest-api",
     "swagger",
-    "zod"
+    "zod",
+    "prisma",
+    "mysql"
   ],
   "author": "Integrante A",
   "license": "ISC",
