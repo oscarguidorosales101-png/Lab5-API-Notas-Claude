@@ -208,4 +208,55 @@ router.delete('/:id', validarParamId, (req, res, next) => {
   }
 });
 
+/**
+ * @openapi
+ * /api/notas/{id}/resumen:
+ *   post:
+ *     summary: Resumir una nota con DeepSeek
+ *     description: Busca primero la nota y envía su contenido para resumirlo en tres viñetas breves en español.
+ *     tags: [Notas, IA]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: integer, minimum: 1 }
+ *         description: Identificador de una nota existente.
+ *     responses:
+ *       200:
+ *         description: Resumen generado por DeepSeek.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               required: [notaId, resumen]
+ *               properties:
+ *                 notaId: { type: integer, minimum: 1 }
+ *                 resumen: { type: string }
+ *       400:
+ *         description: Identificador inválido.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
+ *       404:
+ *         description: Nota inexistente. No se llama al proveedor.
+ *         content:
+ *           application/json:
+ *             schema: { $ref: '#/components/schemas/ErrorResponse' }
+ *       429: { $ref: '#/components/responses/IALimite' }
+ *       502: { $ref: '#/components/responses/IAFallo' }
+ *       503: { $ref: '#/components/responses/IAOcupada' }
+ *       504: { $ref: '#/components/responses/IATimeout' }
+ */
+router.post('/:id/resumen', validarParamId, async (req, res) => {
+  const nota = notasService.buscarPorId(req.notaId);
+  if (!nota) {
+    throw new NotFoundError(`Nota con id ${req.notaId} no encontrada`);
+  }
+  const { respuesta } = await require('../services/deepseek.service').preguntar(
+    nota.contenido,
+    'Resume el texto en 3 viñetas breves, en español.'
+  );
+  res.json({ notaId: nota.id, resumen: respuesta });
+});
+
 module.exports = router;

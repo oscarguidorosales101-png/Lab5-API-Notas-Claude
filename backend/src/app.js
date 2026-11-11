@@ -19,6 +19,7 @@ app.get('/api-docs.json', (req, res) => {
 
 // Rutas de la API
 app.use('/api/notas', notasRoutes);
+app.use('/api/ia', require('./routes/ia.routes'));
 
 // Manejo de rutas no encontradas (404)
 app.use((req, res, next) => {

@@ -1,14 +1,16 @@
-# Lab5-API-Notas-Claude — Backend (Feature / Notas)
+# Laboratorio #5 — API de notas con Express, Swagger y DeepSeek
 
 API REST profesional desarrollada con **Node.js** y **Express 5**, documentada con **Swagger/OpenAPI 3**, con validación de esquemas mediante **Zod** y almacenamiento en memoria.
 
-Este componente corresponde a la implementación de la rama `feature/notas`, bajo la responsabilidad del **Integrante A** para el **Laboratorio #5: API REST con Express, Swagger y Claude API**.
+El backend integra el trabajo del **Integrante A** (`feature/notas`: API de notas y configuración inicial) y del **Integrante B** (`feature/ia`: integración con IA). La guía original utiliza Claude; este proyecto adapta la integración a **DeepSeek**.
+
+Nombres de los integrantes: pendientes de completar por el equipo. No se deducen de las cuentas de Git.
 
 ---
 
 ## 1. Objetivo del Laboratorio
 
-Diseñar e implementar una API REST modular, robusta y documentada que permita gestionar un sistema de notas en memoria. La arquitectura fue estructurada para servir como cimiento sólido y desacoplado, permitiendo al **Integrante B** integrar las capacidades de Inteligencia Artificial (Anthropic Claude API) en la rama `feature/ia` sin necesidad de refactorizar ni reconstruir el backend base.
+Diseñar e implementar una API REST modular y documentada para gestionar notas en memoria, responder preguntas y resumir notas mediante DeepSeek. El cliente se comunica con Express; únicamente el backend accede al proveedor de IA y a su clave privada.
 
 ---
 
@@ -21,7 +23,7 @@ Diseñar e implementar una API REST modular, robusta y documentada que permita g
 - **Swagger JSDoc & Swagger UI Express**: Generación interactiva de documentación OpenAPI 3.
 - **Dotenv**: Gestión de variables de entorno mediante archivos `.env`.
 - **Nodemon**: Herramienta de desarrollo para reinicio automático del servidor ante cambios de código.
-- **@anthropic-ai/sdk**: SDK oficial de Anthropic preinstalado para la integración que realizará el Integrante B.
+- **openai**: cliente compatible con la API de DeepSeek, utilizado por el Integrante B.
 
 ---
 
@@ -50,10 +52,12 @@ backend/
 │   │   └── swagger.js          # Configuración de OpenAPI 3 y Swagger UI
 │   │
 │   ├── routes/
-│   │   └── notas.routes.js     # Endpoints REST y anotaciones Swagger
+│   │   ├── notas.routes.js     # CRUD de A y ruta de resumen de B
+│   │   └── ia.routes.js        # Preguntas, validación y OpenAPI
 │   │
 │   ├── services/
-│   │   └── notas.service.js    # Lógica de negocio y almacenamiento en memoria
+│   │   ├── notas.service.js    # Lógica de negocio y almacenamiento en memoria
+│   │   └── deepseek.service.js # Cliente y llamadas a DeepSeek
 │   │
 │   ├── middlewares/
 │   │   ├── validar.js          # Middleware reutilizable de validación con Zod
@@ -100,24 +104,24 @@ cd backend
 2. Instalar las dependencias del proyecto:
 
 ```bash
-npm install
+npm ci
 ```
 
-3. Configurar las variables de entorno creando el archivo `.env` a partir de `.env.example`:
+3. Si todavía no existe `.env`, crearlo desde la plantilla (PowerShell). Si ya existe, editar únicamente las variables necesarias:
 
-```bash
-cp .env.example .env
+```powershell
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ```
 
 Contenido del archivo `.env`:
 
 ```env
 PORT=3000
-ANTHROPIC_API_KEY=
-CLAUDE_MODEL=claude-haiku-4-5-20251001
+DEEPSEEK_API_KEY=
+DEEPSEEK_MODEL=deepseek-flash
 ```
 
-> **Nota de Seguridad:** El archivo `.env` está expresamente excluido en `.gitignore` para proteger las credenciales y llaves de acceso. La variable `ANTHROPIC_API_KEY` se mantiene vacía hasta que el Integrante B configure su clave para las pruebas de IA.
+> **Nota de seguridad:** `.env` está ignorado. Configura `DEEPSEEK_API_KEY` únicamente en tu archivo local. No sobrescribas un `.env` existente ni compartas la clave por chat o capturas.
 
 ---
 
@@ -160,7 +164,7 @@ También se dispone del esquema OpenAPI en formato JSON en:
 http://localhost:3000/api-docs.json
 ```
 
-Desde la interfaz de Swagger UI se pueden inspeccionar los esquemas, parámetros y ejecutar peticiones directamente contra los endpoints de notas.
+Desde Swagger UI se pueden inspeccionar los contratos de notas e IA. Abre una operación, pulsa **Try it out**, completa los datos y pulsa **Execute**. Las operaciones de preguntas y resumen consumen créditos de DeepSeek.
 
 ---
 
@@ -298,25 +302,87 @@ El servicio `src/services/notas.service.js` implementa un almacenamiento voláti
 
 ---
 
-## 12. Integración pendiente del Integrante B
+## 12. Integración del Integrante B con DeepSeek
 
-La base del backend queda completamente preparada y desacoplada para que el **Integrante B** desarrolle su trabajo en la rama `feature/ia`.
+La integración de preguntas y resúmenes está implementada. Consulta [configuración, contratos, pruebas y evidencias pendientes](docs/INTEGRACION-IA.md). Se conserva el CRUD del integrante A.
 
-El Integrante B encontrará disponibles y listos para usar los siguientes módulos:
+El integrante B implementa el servicio DeepSeek, los dos endpoints de IA, la adaptación de errores del proveedor, sus contratos OpenAPI y pruebas. Reutiliza `validar.js` y `notasService.buscarPorId(id)`. Los ajustes compartidos se limitan al registro del router, la ruta de resumen, el manejador de errores y la configuración/documentación de la integración.
 
-1. **Servicio de notas reutilizable (`src/services/notas.service.js`)**:
-   - Dispone de la función `buscarPorId(id)`, lista para ser importada por el servicio de IA para extraer el contenido de una nota antes de enviarlo a Claude para su resumen.
-2. **Middleware de validación genérico (`src/middlewares/validar.js`)**:
-   - Puede ser utilizado directamente para validar peticiones del endpoint de IA definiendo un nuevo esquema con Zod (ej. `validar(iaResumenSchema)`).
-3. **Manejo centralizado de errores extensible (`src/middlewares/errorHandler.js` y `src/utils/errors.js`)**:
-   - Permite capturar errores de la API de Anthropic o definir subclases de `AppError` (como `ClaudeAPIError`), retornando respuestas estructuradas sin caídas del servidor.
-4. **Configuración modular de Express (`src/app.js`)**:
-   - Permite registrar el nuevo enrutador de IA con una sola línea: `app.use('/api/ia', iaRoutes);`.
-5. **Swagger extensible (`src/config/swagger.js`)**:
-   - Escanea automáticamente los archivos dentro de `src/routes/`, por lo que cualquier endpoint anotado con JSDoc en las rutas del Integrante B aparecerá de inmediato en `/api-docs`.
+### 12.1 Preguntar al modelo
 
-> **Pendiente para el Integrante B:**
-> - Crear `src/services/claude.service.js` con la lógica de invocación a Anthropic Claude.
-> - Crear `src/routes/ia.routes.js` con el endpoint de generación de resúmenes (e.g. `POST /api/ia/resumen`).
-> - Incorporar las anotaciones Swagger correspondientes a las operaciones de IA.
-> - Añadir la clave `ANTHROPIC_API_KEY` en su archivo local `.env`.
+`POST /api/ia/preguntar`, con Content-Type `application/json`:
+
+```json
+{
+  "pregunta": "¿Qué es una API REST?"
+}
+```
+
+Se eliminan espacios externos y se valida que la pregunta tenga entre 3 y 2000 caracteres antes de llamar a IA. HTTP 200 devuelve `respuesta` con el texto generado y `uso` con el objeto de consumo informado por DeepSeek: `prompt_tokens`, `completion_tokens`, `total_tokens` y los campos adicionales del proveedor. No se incluyen cifras de ejemplo que puedan confundirse con evidencia real.
+
+### 12.2 Resumir una nota
+
+`POST /api/notas/{id}/resumen` no necesita body. En Swagger introduce el identificador de una nota creada previamente. HTTP 200 devuelve `notaId` y `resumen` con el texto generado. Una nota inexistente devuelve 404 antes de llamar al proveedor. Un identificador inválido devuelve 400.
+
+El contenido de la nota se envía como mensaje `user`, con la instrucción `system`: «Resume el texto en 3 viñetas breves, en español.»
+
+### 12.3 Adaptación de Claude a DeepSeek y errores
+
+Se usa el paquete `openai` con `baseURL: https://api.deepseek.com`. El SDK de Anthropic se retiró porque no se utiliza. La clave y el modelo proceden de `DEEPSEEK_API_KEY` y `DEEPSEEK_MODEL`. El texto se lee de `choices[0].message.content` y el consumo de `usage`.
+
+El servicio limita la salida a 1024 tokens, desactiva el modo de razonamiento y configura 30 segundos de timeout, sin reintentos automáticos. La correspondencia de tokens es `input_tokens → prompt_tokens` y `output_tokens → completion_tokens`.
+
+Los fallos de IA devuelven exclusivamente:
+
+```json
+{ "error": "IA_NO_DISPONIBLE" }
+```
+
+- 401 del proveedor → 502 de nuestra API.
+- 429 → 429; 503 → 503.
+- Timeout → 504.
+- Otros fallos del proveedor, configuración ausente o respuesta inválida → 502.
+
+Se conserva el tratamiento existente de validaciones, AppError, JSON inválido y errores internos. Los errores de IA no publican mensajes originales ni credenciales.
+
+## 13. Pruebas y estado de las evidencias
+
+Desde `backend`, ejecutar:
+
+```bash
+npm test
+```
+
+La última ejecución automatizada completó **11 pruebas aprobadas y ninguna fallida**, con Express, SDK y servicio de notas reales, pero con transporte DeepSeek simulado. Incluye validación, mensajes enviados, consumo, resumen, inexistentes sin llamadas al proveedor, errores 401/429/503, timeout simulado, respuestas inválidas, configuración ausente, regresión CRUD y contratos OpenAPI. No constituye una prueba real del proveedor.
+
+**Pruebas manuales informadas por el integrante B:** confirmó que Swagger funciona, que probó el CRUD y que la integración de IA también funciona. Esta confirmación procede de sus pruebas locales; no se han adjuntado respuestas, códigos concretos, cifras de tokens ni capturas para documentar cada caso.
+
+Evidencias y comprobaciones que falta incorporar:
+
+- Capturas de Swagger de una pregunta y un resumen exitosos, sin secretos.
+- Registro de `prompt_tokens` y `completion_tokens` de dos llamadas reales.
+- Evidencia de la prueba con clave falsa: respuesta 502 `IA_NO_DISPONIBLE`.
+- Resultados concretos del CRUD desde Swagger: dos creaciones 201, listado 200, inexistente 404, body vacío 400, eliminación 204 y consulta posterior 404.
+- Pruebas cruzadas: el integrante A debe probar los endpoints de B. No se da por realizada esa revisión.
+- Comparación observada al cambiar la instrucción de sistema.
+
+Las capturas se pueden guardar en `docs/evidencias/` y enlazar aquí cuando existan. No se incluyen capturas ni resultados inventados.
+
+## 14. Reflexiones
+
+1. **¿Por qué la clave no puede estar en el frontend?** Un usuario podría leerla en el código descargado, en el bundle o en las solicitudes mediante las herramientas del navegador. Se mantiene exclusivamente en el entorno del backend y fuera de Git.
+2. **¿Qué ocurre si el proveedor devuelve 401?** Nuestra API responde 502. El fallo corresponde a la autenticación del backend ante DeepSeek; reenviar 401 sugeriría incorrectamente que el cliente debe autenticarse ante nuestra API. El cuerpo público no revela detalles del proveedor.
+3. **¿Qué diferencia hay entre system y user?** `system` establece tarea, idioma y formato; `user` contiene la pregunta o el texto a procesar. En el resumen, la instrucción solicita tres viñetas y el mensaje de usuario contiene la nota. La comparación de respuestas reales al modificar esa instrucción queda pendiente.
+4. **¿Cuántos tokens consumieron dos llamadas y cómo se limita el costo?** Las cifras reales quedan pendientes de registrar. DeepSeek informa `prompt_tokens` y `completion_tokens`; `max_tokens: 1024` limita la salida. También se limita la longitud de la pregunta y se evitan reintentos automáticos.
+5. **¿Qué pasaría sin validar el body?** Se gastarían créditos en entradas vacías o inválidas; entradas excesivas aumentarían el consumo y la latencia. Validar antes del proveedor evita esas solicitudes.
+6. **¿Qué conflictos de Git ocurrieron y cómo se resolvieron?** No se observaron conflictos durante el desarrollo realizado. La integración por PR aún está pendiente; no se atribuyen conflictos ni resoluciones que no hayan ocurrido.
+
+## 15. Colaboración y entrega
+
+El integrante B trabaja en `feature/ia`, creada desde `feature/notas` con autorización expresa porque era la única base disponible. Se publicaron cinco commits significativos: `a945785`, `41f59fa`, `1d25c19`, `c660b88` y `37dd6a5`. Esta actualización de documentación es posterior a esos commits.
+
+En la última comprobación del remoto no existía `main`. Falta coordinar esa base, abrir el PR de `feature/ia` hacia `main` y obtener revisión con comentarios y aprobación del compañero antes de integrar. El [borrador de título, descripción y comandos](docs/PR-IA.md) está preparado. No se aprueba ni fusiona el propio PR.
+
+Antes de entregar: completar nombres y roles, adjuntar evidencias y tokens reales, finalizar la revisión en pareja, verificar la rama `main` integrada y completar la coevaluación que indique el docente.
+
+Se detectaron cinco alertas de npm en dependencias cuyas versiones ya estaban en la base de A. Su detalle está en la documentación de integración. Una migración de Zod o actualizaciones generales deben coordinarse como otro cambio del equipo.
