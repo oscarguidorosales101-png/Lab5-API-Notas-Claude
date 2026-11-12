@@ -99,6 +99,43 @@ const crearNota = async ({ titulo, contenido, userId, subjectId, topicId }) => {
 };
 
 /**
+ * Actualiza una nota existente por su identificador único.
+ * @param {number|string} id - Identificador de la nota
+ * @param {Object} datos - Campos a actualizar
+ * @returns {Promise<Object|null>} Nota actualizada o null si no existe
+ */
+const actualizarNota = async (id, datos) => {
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    return null;
+  }
+
+  const existente = await buscarPorId(numericId);
+  if (!existente) {
+    return null;
+  }
+
+  const dataToUpdate = {};
+  if (datos.titulo !== undefined) dataToUpdate.titulo = datos.titulo.trim();
+  if (datos.contenido !== undefined) dataToUpdate.contenido = datos.contenido.trim();
+  if (datos.userId !== undefined) dataToUpdate.userId = datos.userId ? Number(datos.userId) : null;
+  if (datos.subjectId !== undefined) dataToUpdate.subjectId = datos.subjectId ? Number(datos.subjectId) : null;
+  if (datos.topicId !== undefined) dataToUpdate.topicId = datos.topicId ? Number(datos.topicId) : null;
+
+  return await prisma.note.update({
+    where: { id: numericId },
+    data: dataToUpdate,
+    include: {
+      user: {
+        select: { id: true, nombre: true, apellidos: true, email: true }
+      },
+      subject: true,
+      topic: true
+    }
+  });
+};
+
+/**
  * Elimina una nota por su identificador único.
  * @param {number|string} id - Identificador de la nota
  * @returns {Promise<boolean>} true si se eliminó con éxito, false si no se encontró
@@ -127,5 +164,6 @@ module.exports = {
   obtenerTodas,
   buscarPorId,
   crearNota,
+  actualizarNota,
   eliminarNota
 };

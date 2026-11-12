@@ -489,4 +489,29 @@ describe('SISTEMA ACADÉMICO Y MIGRACIÓN MYSQL — SUITE DE PRUEBAS', () => {
       .expect(200);
     assert.ok(resResumen.body.desglosePorOperacion);
   });
+
+  // 18. RUTA PRINCIPAL INFORMATIVA GET /
+  test('18. GET / retorna 200 con el JSON informativo y enlaces operativos', async () => {
+    const res = await request(app)
+      .get('/')
+      .expect(200);
+
+    assert.equal(res.body.nombre, 'Lab5 API de Notas');
+    assert.equal(res.body.version, '1.0.0');
+    assert.equal(res.body.estado, 'operativa');
+    assert.equal(res.body.documentacion, '/api-docs');
+    assert.equal(res.body.health, '/health');
+  });
+
+  // 19. ENDPOINT DE SALUD GET /health
+  test('19. GET /health comprueba conectividad con Express, MySQL y configuración de DeepSeek', async () => {
+    const res = await request(app)
+      .get('/health')
+      .expect(200);
+
+    assert.equal(res.body.status, 'ok');
+    assert.equal(res.body.services.api, 'connected');
+    assert.equal(res.body.services.database, 'connected');
+    assert.equal(res.body.services.deepseek, 'configured');
+  });
 });

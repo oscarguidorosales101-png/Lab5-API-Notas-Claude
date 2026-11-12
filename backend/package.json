@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "node --test --test-concurrency=1",
+    "test": "node --test --test-concurrency=1 test/academico.test.js test/ia.test.js test/retos-a.test.js test/retos-b.test.js",
+    "test:deepseek:live": "node scripts/test-deepseek-live.js",
     "seed": "node prisma/seed.js",
     "migrate:sqlite": "node scripts/migrate-sqlite-to-mysql.js",
     "prisma:generate": "prisma generate",

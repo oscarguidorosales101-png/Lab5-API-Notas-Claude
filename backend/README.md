@@ -1,8 +1,9 @@
 # Laboratorio #5 — Sistema de Gestión Académica y API REST con Express 5, Prisma y MySQL
+## Proyecto Completo: Backend (Node.js + MySQL + DeepSeek) y Frontend (React + Vite)
 
 API REST profesional y modular desarrollada con **Node.js** y **Express 5**, persistencia relacional empresarial en **MySQL** (`Notas_lab`) gestionada mediante **Prisma ORM (v6)**, documentada interactivamente con **Swagger/OpenAPI 3**, con validación de esquemas estricta mediante **Zod**, seguimiento analítico de consumo y costos de IA con **DeepSeek**, y suite exhaustiva de pruebas automatizadas con **Supertest**.
 
-El proyecto integra de manera armónica el trabajo del **Integrante A** (`feature/notas`: arquitectura modular, modelo de datos relacional académico, servicios y endpoints de usuarios, materias, prerrequisitos, períodos, matrículas, calificaciones, temas y notas, migración de datos desde SQLite, sistema analítico de costos y suite de pruebas) y del **Integrante B** (`feature/ia`: integración con DeepSeek AI, streaming y control de conversaciones).
+El proyecto integra de manera armónica el trabajo del **Integrante A** (`feature/notas`: arquitectura modular, modelo de datos relacional académico, servicios y endpoints de usuarios, materias, prerrequisitos, períodos, matrículas, calificaciones, temas y notas, migración de datos desde SQLite, sistema analítico de costos, suite de pruebas y frontend React) y del **Integrante B** (`feature/ia`: integración con DeepSeek AI, streaming y control de conversaciones).
 
 ---
 
@@ -30,41 +31,32 @@ El proyecto integra de manera armónica el trabajo del **Integrante A** (`featur
 
 ---
 
-## 3. Instalación y Configuración Paso a Paso
+## 3. Guía de Instalación y Configuración (PowerShell)
 
-### 3.1 Clonar el repositorio y acceder a backend
-```bash
-git clone <URL_DEL_REPOSITORIO>
-cd Lab5-API-Notas-Claude/backend
-```
-
-### 3.2 Instalar dependencias
-```bash
+### 3.1 Instalar dependencias del Backend
+```powershell
+cd C:\Users\Foward\Desktop\lab2-2\Lab5-API-Notas-Claude\backend
 npm install
 ```
 
-### 3.3 Crear las Bases de Datos en MySQL
-Conéctese a su servidor MySQL local y ejecute:
-```sql
-CREATE DATABASE IF NOT EXISTS `Notas_lab`
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-
-CREATE DATABASE IF NOT EXISTS `Notas_lab_test`
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
+### 3.2 Instalar dependencias del Frontend
+```powershell
+cd C:\Users\Foward\Desktop\lab2-2\Lab5-API-Notas-Claude\frontend
+npm install
 ```
 
-### 3.4 Configuración de Variables de Entorno (`.env`)
-Copie la plantilla de ejemplo:
-```bash
-cp .env.example .env
+### 3.3 Configurar MySQL y Crear las Bases de Datos
+Conéctese al cliente MySQL en PowerShell y ejecute:
+```powershell
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS \`Notas_lab\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; CREATE DATABASE IF NOT EXISTS \`Notas_lab_test\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 ```
-Edite `.env` con las credenciales de su MySQL local:
-```env
+
+### 3.4 Configurar Variables de Entorno en el Backend (`.env`)
+En `backend/.env`:
+```ini
 PORT=3000
-DATABASE_URL="mysql://root:su_contrasena@localhost:3306/Notas_lab"
-TEST_DATABASE_URL="mysql://root:su_contrasena@localhost:3306/Notas_lab_test"
+DATABASE_URL="mysql://root:SU_PASSWORD@localhost:3306/Notas_lab"
+TEST_DATABASE_URL="mysql://root:SU_PASSWORD@localhost:3306/Notas_lab_test"
 
 # Proveedor de IA (DeepSeek)
 DEEPSEEK_API_KEY=su_clave_api_aqui
@@ -78,181 +70,181 @@ AI_PRICE_PER_MILLION_OUTPUT_TOKENS=0.28
 TIMEZONE=America/Costa_Rica
 ```
 
-### 3.5 Aplicar Migraciones de Prisma
-Aplica las migraciones iniciales de MySQL a la base de datos `Notas_lab`:
-```bash
+### 3.5 Ejecutar Migraciones de Prisma de Forma Segura
+Aplica las migraciones declarativas a la base de datos de desarrollo `Notas_lab`:
+```powershell
+cd C:\Users\Foward\Desktop\lab2-2\Lab5-API-Notas-Claude\backend
 npx prisma migrate dev
 ```
-
-### 3.6 Sincronizar Base de Datos de Pruebas
-Sincroniza el esquema relacional en la base de datos aislada de pruebas:
-```bash
-npx prisma db push --schema=prisma/schema.prisma
+Sincroniza la base de datos de pruebas aislada `Notas_lab_test`:
+```powershell
+npx prisma db push
 ```
 
-### 3.7 Migración de Datos Históricos desde SQLite
-Transfiere los registros históricos de `Note` y `AIUsage` preservando identificadores y campos:
-```bash
-npm run migrate:sqlite
+### 3.6 Iniciar el Backend
+```powershell
+cd C:\Users\Foward\Desktop\lab2-2\Lab5-API-Notas-Claude\backend
+npm run dev
 ```
-*Este script es 100% seguro e idempotente; no duplica datos si se ejecuta varias veces.*
+El servidor backend se ejecutará en: `http://localhost:3000`.
 
-### 3.8 Poblar Datos de Prueba (Seed Idempotente)
-Carga datos académicos de demostración (usuarios, materias, prerrequisitos, matrículas y temas):
-```bash
-npm run seed
+### 3.7 Iniciar el Frontend
+En otra ventana de PowerShell:
+```powershell
+cd C:\Users\Foward\Desktop\lab2-2\Lab5-API-Notas-Claude\frontend
+npm run dev
+```
+La aplicación web se ejecutará en: `http://localhost:5173`.
+
+---
+
+## 4. Verificación de Rutas Principales y Estado del Servidor
+
+### 4.1 Comprobar Ruta Raíz (`GET /`)
+Retorna el objeto JSON informativo con versión y enlaces operativos:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/" -Method Get | ConvertTo-Json
+```
+**Respuesta:**
+```json
+{
+  "nombre": "Lab5 API de Notas",
+  "version": "1.0.0",
+  "estado": "operativa",
+  "documentacion": "/api-docs",
+  "health": "/health"
+}
 ```
 
-### 3.9 Iniciar el Servidor
-- Modo desarrollo (con recarga automática mediante Nodemon):
-  ```bash
-  npm run dev
+### 4.2 Comprobar Estado de Salud (`GET /health`)
+Ejecuta una consulta real contra MySQL mediante Prisma Client y valida la configuración de componentes:
+```powershell
+Invoke-RestMethod -Uri "http://localhost:3000/health" -Method Get | ConvertTo-Json
+```
+**Respuesta:**
+```json
+{
+  "status": "ok",
+  "services": {
+    "api": "connected",
+    "database": "connected",
+    "deepseek": "configured"
+  }
+}
+```
+
+### 4.3 Acceder a la Documentación Swagger
+- **Swagger UI interactivo:** [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
+- **Especificación OpenAPI en JSON:** [http://localhost:3000/api-docs.json](http://localhost:3000/api-docs.json)
+
+---
+
+## 5. Pruebas y Auditoría de DeepSeek
+
+### 5.1 Pruebas Automatizadas en Memoria (Cero Consumo de Créditos)
+La suite estándar utiliza mocks y la base de pruebas aislada `Notas_lab_test`. No realiza llamadas a internet ni consume tokens:
+```powershell
+cd C:\Users\Foward\Desktop\lab2-2\Lab5-API-Notas-Claude\backend
+npm test
+```
+**Resultado:** 57 pruebas superadas en 6 suites (100% éxito).
+
+### 5.2 Prueba de Integración REAL con DeepSeek
+Comprueba de forma auténtica las credenciales, modelo y saldo enviando una solicitud mínima de verificación:
+```powershell
+cd C:\Users\Foward\Desktop\lab2-2\Lab5-API-Notas-Claude\backend
+npm run test:deepseek:live
+```
+**Resultado esperado:**
+```text
+====================================================
+🧪 PRUEBA DE INTEGRACIÓN REAL CON DEEPSEEK
+====================================================
+📡 URL Base configurada: https://api.deepseek.com
+🤖 Modelo configurado:   deepseek-flash
+🔑 Clave API:            Presente (35 caracteres, oculta)
+----------------------------------------------------
+⏳ Enviando solicitud de prueba mínima a DeepSeek (max_tokens: 60)...
+----------------------------------------------------
+✅ RESULTADO: CONEXIÓN REAL EXITOSA
+⏱️  Tiempo de respuesta:  ~1100 ms
+💬 Respuesta recibida:   "CONECTADO"
+📊 Tokens de entrada:    51
+📊 Tokens de salida:     22
+📊 Tokens totales:       73
+====================================================
+```
+
+### 5.3 Consultar el Consumo y Costos de IA
+- Historial paginado con costos en USD:
+  ```powershell
+  Invoke-RestMethod -Uri "http://localhost:3000/api/ia/uso?limite=5" -Method Get | ConvertTo-Json -Depth 3
   ```
-- Modo producción:
-  ```bash
-  npm start
+- Resumen acumulado del día:
+  ```powershell
+  Invoke-RestMethod -Uri "http://localhost:3000/api/ia/uso/hoy" -Method Get | ConvertTo-Json -Depth 3
   ```
-El servidor quedará disponible en `http://localhost:3000`.
+- Estadísticas globales y desglose por operación:
+  ```powershell
+  Invoke-RestMethod -Uri "http://localhost:3000/api/ia/uso/resumen" -Method Get | ConvertTo-Json -Depth 3
+  ```
 
 ---
 
-## 4. Documentación Interactiva (Swagger / OpenAPI)
+## 6. Catálogo Completo de Endpoints REST
 
-Una vez iniciado el servidor, acceda a la documentación visual interactiva:
-- **Swagger UI**: [http://localhost:3000/api-docs](http://localhost:3000/api-docs)
-- **Especificación OpenAPI (JSON)**: [http://localhost:3000/api-docs.json](http://localhost:3000/api-docs.json)
-
----
-
-## 5. Catálogo Completo de Endpoints REST
-
-### 5.1 Usuarios (`/api/usuarios`)
-| Método | Ruta | Descripción | Códigos HTTP |
-|---|---|---|---|
-| `GET` | `/api/usuarios` | Lista todos los usuarios (excluyendo contraseñas) | 200, 500 |
-| `GET` | `/api/usuarios/:id` | Detalle del usuario con matrículas y notas asociadas | 200, 400, 404 |
-| `POST` | `/api/usuarios` | Crea un usuario (`ADMIN`, `DOCENTE`, `ESTUDIANTE`) con contraseña hasheada | 201, 400, 409 |
-| `PUT` | `/api/usuarios/:id` | Actualiza los datos de un usuario existente | 200, 400, 404, 409 |
-| `DELETE` | `/api/usuarios/:id` | Elimina un usuario | 204, 400, 404 |
-| `GET` | `/api/usuarios/:id/matriculas` | Consulta el historial de matrículas y calificaciones de un estudiante | 200, 400, 404 |
-
-### 5.2 Materias y Prerrequisitos (`/api/materias`)
-| Método | Ruta | Descripción | Códigos HTTP |
-|---|---|---|---|
-| `GET` | `/api/materias` | Lista todas las materias con sus prerrequisitos y temas | 200, 500 |
-| `GET` | `/api/materias/:id` | Detalle de la materia con relaciones académicas | 200, 400, 404 |
-| `POST` | `/api/materias` | Registra una nueva materia académica (código único, créditos, nota mínima) | 201, 400, 409 |
-| `PUT` | `/api/materias/:id` | Actualiza la información de una materia | 200, 400, 404, 409 |
-| `DELETE` | `/api/materias/:id` | Elimina una materia | 204, 400, 404 |
-| `GET` | `/api/materias/:id/prerrequisitos` | Lista los prerrequisitos asignados a una materia | 200, 400, 404 |
-| `POST` | `/api/materias/:id/prerrequisitos` | Asigna un prerrequisito (previene reflexividad y ciclos directos) | 201, 400, 404, 409 |
-| `DELETE` | `/api/materias/:id/prerrequisitos/:prerrequisitoId` | Elimina la relación de prerrequisito | 204, 400, 404 |
-| `GET` | `/api/materias/:id/temas` | Lista los temas académicos asociados a la materia | 200, 400, 404 |
-
-### 5.3 Períodos Académicos (`/api/periodos`)
-| Método | Ruta | Descripción | Códigos HTTP |
-|---|---|---|---|
-| `GET` | `/api/periodos` | Lista todos los períodos académicos ordenados cronológicamente | 200, 500 |
-| `GET` | `/api/periodos/:id` | Obtiene un período académico por ID | 200, 400, 404 |
-| `POST` | `/api/periodos` | Crea un período lectivo con fechas de inicio/fin y estado activo | 201, 400 |
-| `PUT` | `/api/periodos/:id` | Actualiza un período académico | 200, 400, 404 |
-| `DELETE` | `/api/periodos/:id` | Elimina un período académico | 204, 400, 404 |
-
-### 5.4 Matrículas (`/api/matriculas`)
-| Método | Ruta | Descripción | Códigos HTTP |
-|---|---|---|---|
-| `GET` | `/api/matriculas` | Lista todas las matrículas con estudiante, materia y período | 200, 500 |
-| `GET` | `/api/matriculas/:id` | Detalle de la matrícula con lista de calificaciones | 200, 400, 404 |
-| `POST` | `/api/matriculas` | Matricula un estudiante validando rol, período activo, unicidad y aprobación de prerrequisitos | 201, 400, 404, 409 |
-| `GET` | `/api/matriculas/:id/calificaciones` | Lista las evaluaciones y notas de la matrícula | 200, 400, 404 |
-| `POST` | `/api/matriculas/:id/calificaciones` | Registra una evaluación y recalcula la nota ponderada en transacción | 201, 400, 404, 409 |
-| `GET` | `/api/matriculas/:id/resultado-final` | Detalle del cálculo final ponderado y estado académico | 200, 400, 404 |
-
-### 5.5 Calificaciones (`/api/calificaciones`)
-| Método | Ruta | Descripción | Códigos HTTP |
-|---|---|---|---|
-| `PUT` | `/api/calificaciones/:id` | Actualiza puntaje o ponderación de una evaluación y recalcula nota | 200, 400, 404, 409 |
-| `DELETE` | `/api/calificaciones/:id` | Elimina una evaluación y actualiza la matrícula en transacción | 204, 400, 404 |
-
-### 5.6 Temas Académicos (`/api/temas`)
-| Método | Ruta | Descripción | Códigos HTTP |
-|---|---|---|---|
-| `GET` | `/api/temas` | Lista temas (filtro opcional por `materiaId`) | 200, 500 |
-| `GET` | `/api/temas/:id` | Detalle de un tema con materia y notas asociadas | 200, 400, 404 |
-| `POST` | `/api/temas` | Registra un tema académico para una asignatura | 201, 400, 404 |
-| `PUT` | `/api/temas/:id` | Actualiza un tema académico | 200, 400, 404 |
-| `DELETE` | `/api/temas/:id` | Elimina un tema académico | 204, 400, 404 |
-
-### 5.7 Notas Académicas (`/api/notas`)
-| Método | Ruta | Descripción | Códigos HTTP |
-|---|---|---|---|
-| `GET` | `/api/notas` | Lista notas con filtros avanzados (`userId`, `subjectId`, `topicId`, `search`) | 200, 500 |
-| `GET` | `/api/notas/:id` | Detalle de la nota con relaciones académicas | 200, 400, 404 |
-| `POST` | `/api/notas` | Crea una nota (soporta vinculación opcional a estudiante, materia y tema) | 201, 400 |
-| `DELETE` | `/api/notas/:id` | Elimina una nota por ID | 204, 400, 404 |
-| `POST` | `/api/notas/:id/resumen` | Genera resumen de tres viñetas mediante DeepSeek y audita tokens | 200, 404, 502, 504 |
-
-### 5.8 Inteligencia Artificial y Costos (`/api/ia`)
-| Método | Ruta | Descripción | Códigos HTTP |
-|---|---|---|---|
-| `POST` | `/api/ia/preguntar` | Envía una consulta a DeepSeek y registra persistencia de consumo | 200, 400, 429, 502, 504 |
-| `GET` | `/api/ia/uso` | Historial paginado de solicitudes con tokens y costos | 200, 500 |
-| `GET` | `/api/ia/uso/hoy` | Consumo acumulado diario en zona horaria configurada | 200, 500 |
-| `GET` | `/api/ia/uso/resumen` | Métricas acumuladas y desglose por tipo de operación | 200, 500 |
+| Módulo | Método | Ruta | Descripción | Códigos HTTP |
+|---|---|---|---|---|
+| **Sistema** | `GET` | `/` | Información general del API y enlaces de navegación | 200 |
+| **Salud** | `GET` | `/health` | Chequeo de Express, MySQL (Prisma) y variables de IA | 200, 503 |
+| **Usuarios** | `GET` | `/api/usuarios` | Lista todos los usuarios (excluyendo contraseñas) | 200, 500 |
+| | `GET` | `/api/usuarios/:id` | Detalle del usuario con matrículas y notas asociadas | 200, 400, 404 |
+| | `POST` | `/api/usuarios` | Crea un usuario (`ADMIN`, `DOCENTE`, `ESTUDIANTE`) con contraseña hasheada | 201, 400, 409 |
+| | `PUT` | `/api/usuarios/:id` | Actualiza los datos de un usuario existente | 200, 400, 404, 409 |
+| | `DELETE` | `/api/usuarios/:id` | Elimina un usuario | 204, 400, 404 |
+| | `GET` | `/api/usuarios/:id/matriculas` | Historial de matrículas y calificaciones de un estudiante | 200, 400, 404 |
+| **Materias** | `GET` | `/api/materias` | Lista todas las materias con sus prerrequisitos y temas | 200, 500 |
+| | `GET` | `/api/materias/:id` | Detalle de la materia con relaciones académicas | 200, 400, 404 |
+| | `POST` | `/api/materias` | Registra una nueva materia académica (código único, créditos, nota mínima) | 201, 400, 409 |
+| | `PUT` | `/api/materias/:id` | Actualiza la información de una materia | 200, 400, 404, 409 |
+| | `DELETE` | `/api/materias/:id` | Elimina una materia | 204, 400, 404 |
+| | `GET` | `/api/materias/:id/prerrequisitos` | Lista los prerrequisitos asignados a una materia | 200, 400, 404 |
+| | `POST` | `/api/materias/:id/prerrequisitos` | Asigna un prerrequisito (previene reflexividad y ciclos directos) | 201, 400, 404, 409 |
+| | `DELETE` | `/api/materias/:id/prerrequisitos/:prerrequisitoId` | Elimina la relación de prerrequisito | 204, 400, 404 |
+| | `GET` | `/api/materias/:id/temas` | Lista los temas académicos asociados a la materia | 200, 400, 404 |
+| **Períodos** | `GET` | `/api/periodos` | Lista todos los períodos académicos ordenados cronológicamente | 200, 500 |
+| | `GET` | `/api/periodos/:id` | Obtiene un período académico por ID | 200, 400, 404 |
+| | `POST` | `/api/periodos` | Crea un período lectivo con fechas de inicio/fin y estado activo | 201, 400 |
+| | `PUT` | `/api/periodos/:id` | Actualiza un período académico | 200, 400, 404 |
+| | `DELETE` | `/api/periodos/:id` | Elimina un período académico | 204, 400, 404 |
+| **Matrículas** | `GET` | `/api/matriculas` | Lista todas las matrículas con estudiante, materia y período | 200, 500 |
+| | `GET` | `/api/matriculas/:id` | Detalle de la matrícula con lista de calificaciones | 200, 400, 404 |
+| | `POST` | `/api/matriculas` | Matricula un estudiante validando rol, período activo, unicidad y prerrequisitos | 201, 400, 404, 409 |
+| | `GET` | `/api/matriculas/:id/calificaciones` | Lista las evaluaciones y notas de la matrícula | 200, 400, 404 |
+| | `POST` | `/api/matriculas/:id/calificaciones` | Registra una evaluación y recalcula la nota ponderada en transacción | 201, 400, 404, 409 |
+| | `GET` | `/api/matriculas/:id/resultado-final` | Detalle del cálculo final ponderado y estado académico | 200, 400, 404 |
+| **Calificaciones** | `PUT` | `/api/calificaciones/:id` | Actualiza puntaje o ponderación de una evaluación y recalcula nota | 200, 400, 404, 409 |
+| | `DELETE` | `/api/calificaciones/:id` | Elimina una evaluación y actualiza la matrícula en transacción | 204, 400, 404 |
+| **Temas** | `GET` | `/api/temas` | Lista temas (filtro opcional por `materiaId`) | 200, 500 |
+| | `GET` | `/api/temas/:id` | Detalle de un tema con materia y notas asociadas | 200, 400, 404 |
+| | `POST` | `/api/temas` | Registra un tema académico para una asignatura | 201, 400, 404 |
+| | `PUT` | `/api/temas/:id` | Actualiza un tema académico | 200, 400, 404 |
+| | `DELETE` | `/api/temas/:id` | Elimina un tema académico | 204, 400, 404 |
+| **Notas** | `GET` | `/api/notas` | Lista notas con filtros avanzados (`userId`, `subjectId`, `topicId`, `search`) | 200, 500 |
+| | `GET` | `/api/notas/:id` | Detalle de la nota con relaciones académicas | 200, 400, 404 |
+| | `POST` | `/api/notas` | Crea una nota (soporta vinculación opcional a estudiante, materia y tema) | 201, 400 |
+| | `DELETE` | `/api/notas/:id` | Elimina una nota por ID | 204, 400, 404 |
+| | `POST` | `/api/notas/:id/resumen` | Genera resumen de tres viñetas mediante DeepSeek y audita tokens | 200, 404, 502, 504 |
+| **IA & Costos** | `POST` | `/api/ia/preguntar` | Envía una consulta a DeepSeek y registra persistencia de consumo | 200, 400, 429, 502, 504 |
+| | `POST` | `/api/ia/conversar` | Conversación continua con historial y roles | 200, 400, 404, 409, 429, 502 |
+| | `POST` | `/api/ia/preguntar/stream` | Respuesta progresiva mediante Server-Sent Events (SSE) | 200, 400, 429, 502 |
+| | `GET` | `/api/ia/uso` | Historial paginado de solicitudes con tokens y costos | 200, 500 |
+| | `GET` | `/api/ia/uso/hoy` | Consumo acumulado diario en zona horaria configurada | 200, 500 |
+| | `GET` | `/api/ia/uso/resumen` | Métricas acumuladas y desglose por tipo de operación | 200, 500 |
 
 ---
 
-## 6. Modelo de Datos Relacional en Prisma
-
-```mermaid
-erDiagram
-    User ||--o{ Enrollment : "matricula"
-    User ||--o{ Note : "escribe"
-    Subject ||--o{ SubjectPrerequisite : "tiene_prerrequisitos"
-    Subject ||--o{ SubjectPrerequisite : "es_prerrequisito_de"
-    Subject ||--o{ Enrollment : "inscribe"
-    Subject ||--o{ NoteTopic : "clasifica_en"
-    Subject ||--o{ Note : "referencia"
-    AcademicPeriod ||--o{ Enrollment : "contiene"
-    Enrollment ||--o{ Grade : "evalua"
-    NoteTopic ||--o{ Note : "organiza"
-```
-
-### Entidades Principales
-1. **User**: Almacena usuarios con contraseña hasheada (SHA-256). Roles: `ADMIN`, `DOCENTE`, `ESTUDIANTE`.
-2. **Subject**: Asignaturas académicas con `codigo` único, `creditos` y `notaMinimaAprobatoria` (por defecto 70.0).
-3. **SubjectPrerequisite**: Relación autorreferenciada muchos a muchos entre materias.
-4. **AcademicPeriod**: Períodos o ciclos lectivos (`anio`, `periodo`, `activo`).
-5. **Enrollment**: Matrícula única por `(userId, subjectId, academicPeriodId)`, con `estado` (`ACTIVA`, `APROBADA`, `REPROBADA`) y `notaFinal`.
-6. **Grade**: Evaluaciones de una matrícula con `puntajeObtenido`, `puntajeMaximo`, `porcentaje` (ponderación) y observaciones.
-7. **NoteTopic**: Categorización temática de las asignaturas (ej. Álgebra, Estructura Atómica).
-8. **Note**: Apuntes académicos con soporte para filtros por materia, tema y estudiante.
-9. **AIUsage**: Registro de auditoría para cada petición de IA (`requestId`, `tipoOperacion`, tokens reales de entrada/salida y costos calculados en USD).
-
----
-
-## 7. Reglas de Negocio Académicas
-
-1. **Matrículas y Prerrequisitos:**
-   - Únicamente usuarios con rol `ESTUDIANTE` pueden matricular asignaturas.
-   - El período académico debe existir y tener `activo: true`.
-   - No se permiten matrículas duplicadas para el mismo estudiante, materia y período (código 409).
-   - **Verificación Estricta de Prerrequisitos:** Para matricular una materia con prerrequisitos, el estudiante debe contar con matrícula previa en cada una de las materias requisito con estado `APROBADA` o `notaFinal >= notaMinimaAprobatoria`. En caso de incumplimiento, se rechaza la matrícula (HTTP 409) detallando las materias pendientes.
-
-2. **Calificaciones Ponderadas y Transacciones:**
-   - Cada evaluación valida que `puntajeObtenido <= puntajeMaximo` y `puntajeMaximo > 0`.
-   - La suma acumulada de las ponderaciones (`porcentaje`) para una matrícula no puede superar el 100%.
-   - Cada inserción, actualización o eliminación de calificación se ejecuta en una **transacción atómica de Prisma**, recalculando la nota final:
-     $$\text{Nota Final} = \sum \left(\frac{\text{Puntaje Obtenido}}{\text{Puntaje Máximo}} \times \text{Ponderación}\right)$$
-   - Al completar el 100% de la evaluación, la matrícula transiciona automáticamente a estado `APROBADA` o `REPROBADA` según la nota mínima establecida por la materia.
-
-3. **Organización Temática de Apuntes:**
-   - Cada estudiante puede clasificar sus notas bajo materias y temas específicos.
-   - La API permite consultar notas mediante filtros en query parameters (`GET /api/notas?userId=1&subjectId=2&topicId=1`).
-
----
-
-## 8. Fórmulas de Costos de IA (DeepSeek)
+## 7. Fórmulas de Costos de IA (DeepSeek)
 
 Se registran los tokens reales reportados por el proveedor y se calculan los costos según las tarifas configuradas en `.env`:
 - **Costo Entrada (USD):**
@@ -261,19 +253,3 @@ Se registran los tokens reales reportados por el proveedor y se calculan los cos
   $$\text{Costo Salida} = \frac{\text{tokensSalida}}{1\,000\,000} \times \text{AI\_PRICE\_PER\_MILLION\_OUTPUT\_TOKENS}$$
 - **Costo Total (USD):**
   $$\text{Costo Total} = \text{Costo Entrada} + \text{Costo Salida}$$
-
----
-
-## 9. Pruebas Automatizadas
-
-El backend incluye una suite completa de pruebas de integración con el test runner nativo de Node.js y **Supertest**.
-
-Para ejecutar todas las pruebas:
-```bash
-npm test
-```
-
-### Características de la Suite de Pruebas:
-- **Aislamiento Total:** Las pruebas se ejecutan exclusivamente contra la base de datos `Notas_lab_test` definida en `TEST_DATABASE_URL`, garantizando que la base de desarrollo `Notas_lab` jamás se contamine ni se borre.
-- **Cero Gasto de Créditos de IA:** Las llamadas a DeepSeek son interceptadas mediante mocks en memoria; no se realizan peticiones externas a internet ni se consumen tokens reales.
-- **Cobertura Completa:** 55 pruebas automatizadas organizadas en 6 suites que verifican CRUD de notas, persistencia en MySQL, transferencia de datos SQLite, CRUD de usuarios, materias, prerrequisitos, matrículas, calificaciones ponderadas, organización por temas, auditoría de AIUsage, resumen diario por zona horaria y compatibilidad con las rutas del Integrante B.

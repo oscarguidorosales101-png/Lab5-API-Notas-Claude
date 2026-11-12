@@ -66,13 +66,13 @@ describe('RETO 1, 2 Y 3 — PRUEBAS DE INTEGRACIÓN CON SUPERTEST, PRISMA Y COST
   });
 
   /* =========================================================================
-   * 4.1 PRUEBAS DEL CRUD CON PERSISTENCIA EN SQLITE VIA PRISMA
+   * 4.1 PRUEBAS DEL CRUD CON PERSISTENCIA EN MYSQL VIA PRISMA
    * ========================================================================= */
-  describe('4.1 CRUD de Notas con Prisma y SQLite', () => {
-    test('1. Crear una nota correctamente retorna 201 y persiste en SQLite', async () => {
+  describe('4.1 CRUD de Notas con Prisma y MySQL (Notas_lab_test)', () => {
+    test('1. Crear una nota correctamente retorna 201 y persiste en MySQL', async () => {
       const payload = {
-        titulo: 'Nota SQLite',
-        contenido: 'Contenido persistido en la base de datos SQLite con Prisma.'
+        titulo: 'Nota MySQL',
+        contenido: 'Contenido persistido en la base de datos MySQL con Prisma.'
       };
 
       const res = await request(app)
@@ -84,7 +84,7 @@ describe('RETO 1, 2 Y 3 — PRUEBAS DE INTEGRACIÓN CON SUPERTEST, PRISMA Y COST
       assert.equal(res.body.titulo, payload.titulo);
       assert.equal(res.body.contenido, payload.contenido);
 
-      // Verificación directa en base de datos SQLite via Prisma
+      // Verificación directa en base de datos MySQL via Prisma
       const notaEnDb = await prisma.note.findUnique({ where: { id: res.body.id } });
       assert.ok(notaEnDb);
       assert.equal(notaEnDb.titulo, payload.titulo);
@@ -189,7 +189,7 @@ describe('RETO 1, 2 Y 3 — PRUEBAS DE INTEGRACIÓN CON SUPERTEST, PRISMA Y COST
    * 4.2 SIMULACIÓN DEL SERVICIO DE IA Y REGISTRO DE CONSUMO
    * ========================================================================= */
   describe('4.2 Mocks de DeepSeek y Registro Persistente de Consumo', () => {
-    test('Respuesta exitosa de una pregunta registra consumo en SQLite', async () => {
+    test('Respuesta exitosa de una pregunta registra consumo en MySQL', async () => {
       resetMock(200, 'París es la capital de Francia', { prompt_tokens: 15, completion_tokens: 30, total_tokens: 45 });
 
       const res = await request(app)
@@ -209,7 +209,7 @@ describe('RETO 1, 2 Y 3 — PRUEBAS DE INTEGRACIÓN CON SUPERTEST, PRISMA Y COST
       assert.equal(registros[0].totalTokens, 45);
     });
 
-    test('Respuesta exitosa de un resumen registra consumo en SQLite', async () => {
+    test('Respuesta exitosa de un resumen registra consumo en MySQL', async () => {
       const nota = await prisma.note.create({
         data: { titulo: 'Reunión', contenido: 'Detalle de la reunión técnica del equipo' }
       });
