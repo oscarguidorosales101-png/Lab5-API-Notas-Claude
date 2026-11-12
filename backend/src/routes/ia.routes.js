@@ -250,7 +250,14 @@ router.get('/uso/resumen', async (req, res, next) => {
  *       503: { $ref: '#/components/responses/IAOcupada' }
  *       504: { $ref: '#/components/responses/IATimeout' }
  */
-router.post('/conversar', validar(preguntaSchema.extend({
+const normalizarPregunta = (req, res, next) => {
+  if (req.body && !req.body.pregunta && req.body.mensaje) {
+    req.body.pregunta = req.body.mensaje;
+  }
+  next();
+};
+
+router.post('/conversar', normalizarPregunta, validar(preguntaSchema.extend({
   conversacionId: z.string().uuid().optional()
 })), async (req, res) => {
   const resultado = await conversaciones.conversar(req.body.pregunta, req.body.conversacionId);
@@ -258,6 +265,37 @@ router.post('/conversar', validar(preguntaSchema.extend({
     tipoOperacion: 'pregunta', modelo: process.env.DEEPSEEK_MODEL, uso: resultado.uso
   });
   res.json(resultado);
+});
+
+/**
+ * @openapi
+ * /api/ia/chat:
+ *   post:
+ *     summary: Chat conversacional interactivo (alias compatible)
+ *     description: Permite enviar 'pregunta' o 'mensaje' y mantener una conversación fluida con historial.
+ *     tags: [IA]
+ */
+router.post('/chat', async (req, res, next) => {
+  try {
+    const texto = req.body.pregunta || req.body.mensaje;
+    if (!texto || typeof texto !== 'string' || texto.trim().length < 3 || texto.trim().length > 2000) {
+      return res.status(400).json({
+        error: 'Error de validación',
+        detalles: [{ campo: 'pregunta', mensaje: 'Debe proporcionar una pregunta o mensaje entre 3 y 2000 caracteres' }]
+      });
+    }
+    const resultado = await conversaciones.conversar(texto.trim(), req.body.conversacionId);
+    if (resultado.uso) {
+      await costosService.registrarConsumo({
+        tipoOperacion: 'pregunta',
+        modelo: process.env.DEEPSEEK_MODEL || 'deepseek-flash',
+        uso: resultado.uso
+      });
+    }
+    res.json(resultado);
+  } catch (error) {
+    next(error);
+  }
 });
 
 /**

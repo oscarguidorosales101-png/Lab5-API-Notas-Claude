@@ -31,6 +31,8 @@ const notaSchema = z.object({
   topicId: z.number().int().positive().optional().nullable()
 });
 
+const notaActualizarSchema = notaSchema.partial();
+
 /**
  * Middleware de orden superior para validar cualquier target (body, params, query) con Zod.
  * Reutilizable para rutas actuales y futuras integraciones.
@@ -77,5 +79,6 @@ const validar = (schema, target = 'body') => {
 
 module.exports = {
   validar,
-  notaSchema
+  notaSchema,
+  notaActualizarSchema
 };

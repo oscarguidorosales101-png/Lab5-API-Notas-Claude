@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const notasService = require('../services/notas.service');
-const { validar, notaSchema } = require('../middlewares/validar');
+const { validar, notaSchema, notaActualizarSchema } = require('../middlewares/validar');
 const { NotFoundError, BadRequestError } = require('../utils/errors');
 const costosService = require('../services/costos.service');
 
@@ -155,6 +155,59 @@ router.post('/', validar(notaSchema), async (req, res, next) => {
   try {
     const nuevaNota = await notasService.crearNota(req.body);
     res.status(201).json(nuevaNota);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /api/notas/{id}:
+ *   put:
+ *     summary: Actualizar una nota por ID
+ *     description: Actualiza los campos especificados de una nota existente.
+ *     tags:
+ *       - Notas
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *         description: ID de la nota a actualizar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               titulo:
+ *                 type: string
+ *               contenido:
+ *                 type: string
+ *               userId:
+ *                 type: integer
+ *               subjectId:
+ *                 type: integer
+ *               topicId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Nota actualizada exitosamente.
+ *       400:
+ *         description: Error de validación o ID inválido.
+ *       404:
+ *         description: Nota no encontrada.
+ */
+router.put('/:id', validarParamId, validar(notaActualizarSchema), async (req, res, next) => {
+  try {
+    const actualizada = await notasService.actualizarNota(req.notaId, req.body);
+    if (!actualizada) {
+      throw new NotFoundError(`Nota con id ${req.notaId} no encontrada`);
+    }
+    res.status(200).json(actualizada);
   } catch (error) {
     next(error);
   }
