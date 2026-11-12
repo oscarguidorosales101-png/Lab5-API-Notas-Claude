@@ -9,6 +9,7 @@ const {
   prerrequisitoSchema
 } = require('../validators/academic.validator');
 const { BadRequestError } = require('../utils/errors');
+const { autenticar, requerirRol } = require('../middlewares/auth');
 
 const validarParamId = (req, res, next) => {
   const numId = Number(req.params.id);
@@ -102,7 +103,7 @@ router.get('/:id', validarParamId, async (req, res, next) => {
  *       409:
  *         description: Código de materia duplicado.
  */
-router.post('/', validar(materiaSchema), async (req, res, next) => {
+router.post('/', autenticar, requerirRol(['ADMIN']), validar(materiaSchema), async (req, res, next) => {
   try {
     const nuevaMateria = await materiasService.crear(req.body);
     res.status(201).json(nuevaMateria);
@@ -138,7 +139,7 @@ router.post('/', validar(materiaSchema), async (req, res, next) => {
  *       409:
  *         description: Código de materia en conflicto.
  */
-router.put('/:id', validarParamId, validar(materiaActualizarSchema), async (req, res, next) => {
+router.put('/:id', autenticar, requerirRol(['ADMIN']), validarParamId, validar(materiaActualizarSchema), async (req, res, next) => {
   try {
     const materiaActualizada = await materiasService.actualizar(req.materiaId, req.body);
     res.status(200).json(materiaActualizada);
@@ -166,7 +167,7 @@ router.put('/:id', validarParamId, validar(materiaActualizarSchema), async (req,
  *       404:
  *         description: Materia no encontrada.
  */
-router.delete('/:id', validarParamId, async (req, res, next) => {
+router.delete('/:id', autenticar, requerirRol(['ADMIN']), validarParamId, async (req, res, next) => {
   try {
     await materiasService.eliminar(req.materiaId);
     res.status(204).send();
@@ -239,7 +240,7 @@ router.get('/:id/prerrequisitos', validarParamId, async (req, res, next) => {
  *       409:
  *         description: Prerrequisito ya asignado o dependencia circular.
  */
-router.post('/:id/prerrequisitos', validarParamId, validar(prerrequisitoSchema), async (req, res, next) => {
+router.post('/:id/prerrequisitos', autenticar, requerirRol(['ADMIN']), validarParamId, validar(prerrequisitoSchema), async (req, res, next) => {
   try {
     const relacion = await materiasService.agregarPrerrequisito(req.materiaId, req.body.prerequisiteId);
     res.status(201).json(relacion);
@@ -273,7 +274,7 @@ router.post('/:id/prerrequisitos', validarParamId, validar(prerrequisitoSchema),
  *       404:
  *         description: Relación de prerrequisito no encontrada.
  */
-router.delete('/:id/prerrequisitos/:prerrequisitoId', validarParamId, async (req, res, next) => {
+router.delete('/:id/prerrequisitos/:prerrequisitoId', autenticar, requerirRol(['ADMIN']), validarParamId, async (req, res, next) => {
   try {
     const prereqId = Number(req.params.prerrequisitoId);
     if (!Number.isInteger(prereqId) || prereqId <= 0) {

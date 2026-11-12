@@ -23,7 +23,9 @@ model User {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   enrollments Enrollment[]
-  notes       Note[]
+  notes         Note[]
+  aiUsages      AIUsage[]
+  conversations Conversation[]
 }
 
 model Subject {
@@ -150,5 +152,38 @@ model AIUsage {
   costoEntrada  Float
   costoSalida   Float
   costoTotal    Float
+  userId        Int?
   createdAt     DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+}
+
+model Conversation {
+  id        String    @id @default(uuid()) @db.VarChar(36)
+  titulo    String    @default("Nueva conversación") @db.VarChar(150)
+  userId    Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+
+  @@map("conversation")
+  @@index([userId])
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversacionId String       @db.VarChar(36)
+  role           String       @db.VarChar(20)
+  content        String       @db.Text
+  tokens         Int?
+  createdAt      DateTime     @default(now())
+
+  conversation   Conversation @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+
+  @@map("message")
+  @@index([conversacionId])
 }

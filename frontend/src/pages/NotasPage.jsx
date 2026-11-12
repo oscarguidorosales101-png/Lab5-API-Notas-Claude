@@ -157,6 +157,18 @@ export const NotasPage = () => {
     ? temas.filter((t) => t.subjectId === Number(formData.subjectId))
     : temas;
 
+  // Filtrado reactivo en tiempo real mientras el usuario escribe
+  const notasFiltradas = notas.filter((n) => {
+    if (!busqueda.trim()) return true;
+    const q = busqueda.toLowerCase().trim();
+    const titulo = (n.titulo || '').toLowerCase();
+    const contenido = (n.contenido || '').toLowerCase();
+    const materia = (n.subject?.nombre || n.subject?.codigo || '').toLowerCase();
+    const tema = (n.topic?.nombre || '').toLowerCase();
+    const autor = n.user ? `${n.user.nombre} ${n.user.apellidos}`.toLowerCase() : '';
+    return titulo.includes(q) || contenido.includes(q) || materia.includes(q) || tema.includes(q) || autor.includes(q);
+  });
+
   return (
     <div className="notas-page">
       <div className="card-header" style={{ marginBottom: '1.25rem' }}>
@@ -184,9 +196,9 @@ export const NotasPage = () => {
 
       <ErrorBanner error={error} onRetry={cargarNotas} />
 
-      {/* Barra de Filtros y Búsqueda */}
+      {/* Barra de Filtros y Búsqueda en Tiempo Real */}
       <div className="card filters-card">
-        <form onSubmit={handleBuscar} className="search-form-row">
+        <form onSubmit={handleBuscar} className="search-form-row" style={{ flex: 1 }}>
           <div className="search-box">
             <Search size={18} className="search-icon" />
             <input
@@ -196,11 +208,22 @@ export const NotasPage = () => {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
             />
+            {busqueda && (
+              <button
+                type="button"
+                onClick={() => setBusqueda('')}
+                className="btn-clear-search"
+                title="Limpiar búsqueda"
+              >
+                &times;
+              </button>
+            )}
           </div>
-          <button type="submit" className="btn btn-secondary btn-sm">
-            Buscar
-          </button>
         </form>
+
+        <span className="results-count">
+          {notasFiltradas.length} {notasFiltradas.length === 1 ? 'apunte' : 'apuntes'}
+        </span>
 
         <div className="filters-row">
           <div className="filter-item">
@@ -271,7 +294,7 @@ export const NotasPage = () => {
       {/* Grid de Tarjetas de Notas */}
       {loading ? (
         <LoadingSpinner mensaje="Cargando cuaderno de notas..." />
-      ) : notas.length === 0 ? (
+      ) : notasFiltradas.length === 0 ? (
         <EmptyState
           icon={FileText}
           titulo="No hay notas que coincidan"
@@ -281,7 +304,7 @@ export const NotasPage = () => {
         />
       ) : (
         <div className="notas-grid">
-          {notas.map((n) => (
+          {notasFiltradas.map((n) => (
             <div key={n.id} className="card nota-card">
               <div className="nota-card-header">
                 <span className="nota-date">

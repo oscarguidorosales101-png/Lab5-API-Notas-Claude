@@ -11,9 +11,11 @@ class ApiClient {
   async request(endpoint, options = {}) {
     const url = `${this.baseUrl}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
     
+    const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       ...options.headers
     };
 

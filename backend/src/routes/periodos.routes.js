@@ -4,6 +4,7 @@ const periodosService = require('../services/periodos.service');
 const { validar } = require('../middlewares/validar');
 const { periodoSchema, periodoActualizarSchema } = require('../validators/academic.validator');
 const { BadRequestError } = require('../utils/errors');
+const { autenticar, requerirRol } = require('../middlewares/auth');
 
 const validarParamId = (req, res, next) => {
   const numId = Number(req.params.id);
@@ -102,7 +103,7 @@ router.get('/:id', validarParamId, async (req, res, next) => {
  *       400:
  *         description: Error de validación o fechas inconsistentes.
  */
-router.post('/', validar(periodoSchema), async (req, res, next) => {
+router.post('/', autenticar, requerirRol(['ADMIN']), validar(periodoSchema), async (req, res, next) => {
   try {
     const nuevoPeriodo = await periodosService.crear(req.body);
     res.status(201).json(nuevoPeriodo);
@@ -136,7 +137,7 @@ router.post('/', validar(periodoSchema), async (req, res, next) => {
  *       404:
  *         description: Período académico no encontrado.
  */
-router.put('/:id', validarParamId, validar(periodoActualizarSchema), async (req, res, next) => {
+router.put('/:id', autenticar, requerirRol(['ADMIN']), validarParamId, validar(periodoActualizarSchema), async (req, res, next) => {
   try {
     const periodoActualizado = await periodosService.actualizar(req.periodoId, req.body);
     res.status(200).json(periodoActualizado);
@@ -164,7 +165,7 @@ router.put('/:id', validarParamId, validar(periodoActualizarSchema), async (req,
  *       404:
  *         description: Período académico no encontrado.
  */
-router.delete('/:id', validarParamId, async (req, res, next) => {
+router.delete('/:id', autenticar, requerirRol(['ADMIN']), validarParamId, async (req, res, next) => {
   try {
     await periodosService.eliminar(req.periodoId);
     res.status(204).send();

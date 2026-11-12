@@ -2,6 +2,7 @@ const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const { swaggerSpec } = require('./config/swagger');
 const prisma = require('./config/prisma');
+const authRoutes = require('./routes/auth.routes');
 const notasRoutes = require('./routes/notas.routes');
 const usuariosRoutes = require('./routes/usuarios.routes');
 const materiasRoutes = require('./routes/materias.routes');
@@ -83,6 +84,7 @@ app.get('/health', async (req, res) => {
 });
 
 // Rutas académicas y del laboratorio
+app.use('/api/auth', authRoutes);
 app.use('/api/notas', notasRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/materias', materiasRoutes);

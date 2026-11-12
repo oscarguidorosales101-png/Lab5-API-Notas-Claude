@@ -18,6 +18,10 @@ const options = {
     ],
     tags: [
       {
+        name: 'Autenticación',
+        description: 'Inicio de sesión con JWT, perfil de usuario y cambio rápido de cuentas demo'
+      },
+      {
         name: 'Usuarios',
         description: 'Gestión de usuarios del sistema (estudiantes, docentes, administradores)'
       },
@@ -55,6 +59,14 @@ const options = {
       }
     ],
     components: {
+      securitySchemes: {
+        BearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Introduce el token JWT obtenido en /api/auth/login'
+        }
+      },
       schemas: {
         Usuario: {
           type: 'object',

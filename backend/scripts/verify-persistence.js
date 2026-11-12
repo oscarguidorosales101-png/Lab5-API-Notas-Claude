@@ -21,12 +21,26 @@ async function verifyPersistence() {
     await prisma.$connect();
     console.log('✅ Paso 1: Conexión establecida con MySQL (Notas_lab)');
 
-    // Paso 2: Consultar usuarios y materias mediante HTTP
-    const resUsuarios = await request(app).get('/api/usuarios').expect(200);
-    console.log(`✅ Paso 2a: GET /api/usuarios retornó ${resUsuarios.body.length} usuarios existentes`);
+    // Paso 2: Autenticación real mediante /api/auth/login
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ email: 'admin@universidad.test', password: 'Clave123*' })
+      .expect(200);
+    const authToken = loginRes.body.token;
+    console.log(`✅ Paso 2a: Login exitoso para ${loginRes.body.usuario.email} (${loginRes.body.usuario.rol})`);
 
-    const resMaterias = await request(app).get('/api/materias').expect(200);
-    console.log(`✅ Paso 2b: GET /api/materias retornó ${resMaterias.body.length} materias existentes`);
+    // Paso 2b: Consultar usuarios y materias mediante HTTP con Authorization
+    const resUsuarios = await request(app)
+      .get('/api/usuarios')
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(200);
+    console.log(`✅ Paso 2b: GET /api/usuarios retornó ${resUsuarios.body.length} usuarios existentes`);
+
+    const resMaterias = await request(app)
+      .get('/api/materias')
+      .set('Authorization', `Bearer ${authToken}`)
+      .expect(200);
+    console.log(`✅ Paso 2c: GET /api/materias retornó ${resMaterias.body.length} materias existentes`);
 
     // Paso 3: Crear un registro de prueba controlado en Notas_lab
     const testPayload = {
@@ -93,7 +107,7 @@ async function verifyPersistence() {
     console.log('🎉 PERSISTENCIA REAL EN NOTAS_LAB CONFIRMADA AL 100%');
     console.log('====================================================');
   } catch (error) {
-    console.error('❌ Error en prueba de persistencia:', error);
+    console.error(' Error en prueba de persistencia:', error);
     process.exit(1);
   } finally {
     await prisma.$disconnect();

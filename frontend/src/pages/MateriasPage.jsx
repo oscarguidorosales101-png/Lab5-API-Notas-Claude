@@ -198,7 +198,7 @@ export const MateriasPage = () => {
 
       <ErrorBanner error={error} onRetry={cargarLista} />
 
-      {/* Barra de Filtros */}
+      {/* Barra de Filtros y Búsqueda en Tiempo Real */}
       <div className="card search-card">
         <div className="search-box">
           <Search size={18} className="search-icon" />
@@ -209,6 +209,16 @@ export const MateriasPage = () => {
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
+          {busqueda && (
+            <button
+              type="button"
+              onClick={() => setBusqueda('')}
+              className="btn-clear-search"
+              title="Limpiar búsqueda"
+            >
+              &times;
+            </button>
+          )}
         </div>
         <span className="results-count">
           {materiasFiltradas.length} {materiasFiltradas.length === 1 ? 'materia' : 'materias'} disponibles

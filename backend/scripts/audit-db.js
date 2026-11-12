@@ -44,7 +44,7 @@ async function audit() {
     console.log('Muestra de Matrícula:', sampleEnrollment ? { id: sampleEnrollment.id, userId: sampleEnrollment.userId, subjectId: sampleEnrollment.subjectId, notaFinal: sampleEnrollment.notaFinal, estado: sampleEnrollment.estado, evaluaciones: sampleEnrollment.grades.length } : null);
 
   } catch (error) {
-    console.error('❌ Error durante la auditoría de MySQL:', error.message);
+    console.error(' Error durante la auditoría de MySQL:', error.message);
   } finally {
     await prisma.$disconnect();
   }
