@@ -4,6 +4,10 @@ const matriculasService = require('../services/matriculas.service');
 const { validar } = require('../middlewares/validar');
 const { calificacionActualizarSchema } = require('../validators/academic.validator');
 const { BadRequestError } = require('../utils/errors');
+const { autenticar, requerirRol } = require('../middlewares/auth');
+
+router.use(autenticar);
+router.use(requerirRol(['ADMIN', 'DOCENTE']));
 
 const validarParamId = (req, res, next) => {
   const numId = Number(req.params.id);

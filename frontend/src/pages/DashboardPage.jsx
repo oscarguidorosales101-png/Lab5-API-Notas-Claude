@@ -100,26 +100,58 @@ export const DashboardPage = () => {
         <div className="welcome-content">
           <div className="welcome-tag">
             <Sparkles size={15} />
-            <span>Sistema Relacional MySQL — Base: Notas_lab</span>
+            <span>Sistema Relacional MySQL — Base: Notas_lab &bull; Rol: <strong>{usuarioActivo?.rol || 'ESTUDIANTE'}</strong></span>
           </div>
           <h2>
-            {usuarioActivo ? `Bienvenido, ${usuarioActivo.nombre} ${usuarioActivo.apellidos}` : 'Panel de Control Académico'}
+            {usuarioActivo ? `Bienvenido/a, ${usuarioActivo.nombre} ${usuarioActivo.apellidos}` : 'Panel de Control Académico'}
           </h2>
           <p>
-            {usuarioActivo?.rol === 'ESTUDIANTE'
-              ? 'Consulta tus materias inscritas, cumplimiento de prerrequisitos, notas ponderadas y cuaderno de apuntes.'
-              : 'Administración centralizada de usuarios, catálogo de materias, matrículas y auditoría de IA.'}
+            {usuarioActivo?.rol === 'ADMIN'
+              ? 'Panel de control maestro: supervisa el catálogo de asignaturas, la matrícula general de estudiantes, los períodos lectivos y las métricas de consumo de inteligencia artificial.'
+              : usuarioActivo?.rol === 'DOCENTE'
+              ? 'Portal docente: gestiona las calificaciones ponderadas de tus cursos, estructura los temas académicos y aprovecha el asistente pedagógico para formular evaluaciones.'
+              : 'Portal estudiantil: consulta tus asignaturas inscritas, cumplimiento de prerrequisitos, tus calificaciones acumuladas y tu cuaderno personal de notas con tutoría DeepSeek.'}
           </p>
         </div>
         <div className="welcome-actions">
-          <Link to="/matriculas" className="btn btn-primary">
-            <span>Gestionar Matrículas</span>
-            <ArrowRight size={16} />
-          </Link>
-          <Link to="/ia" className="btn btn-secondary">
-            <Bot size={16} />
-            <span>Consultar IA</span>
-          </Link>
+          {usuarioActivo?.rol === 'ADMIN' && (
+            <>
+              <Link to="/matriculas" className="btn btn-primary">
+                <span>Gestionar Matrículas</span>
+                <ArrowRight size={16} />
+              </Link>
+              <Link to="/consumo" className="btn btn-secondary">
+                <BarChart3 size={16} />
+                <span>Auditoría IA</span>
+              </Link>
+            </>
+          )}
+
+          {usuarioActivo?.rol === 'DOCENTE' && (
+            <>
+              <Link to="/calificaciones" className="btn btn-primary">
+                <Award size={16} />
+                <span>Calificar Evaluaciones</span>
+              </Link>
+              <Link to="/ia" className="btn btn-secondary">
+                <Bot size={16} />
+                <span>Asistente Pedagógico IA</span>
+              </Link>
+            </>
+          )}
+
+          {(!usuarioActivo || usuarioActivo?.rol === 'ESTUDIANTE') && (
+            <>
+              <Link to="/calificaciones" className="btn btn-primary">
+                <Award size={16} />
+                <span>Mis Calificaciones</span>
+              </Link>
+              <Link to="/ia" className="btn btn-secondary">
+                <Bot size={16} />
+                <span>Consultar Tutor IA</span>
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

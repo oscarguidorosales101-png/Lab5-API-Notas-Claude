@@ -57,7 +57,8 @@ const registrarConsumo = async ({
   requestId = null,
   tipoOperacion,
   modelo = process.env.DEEPSEEK_MODEL || 'deepseek-flash',
-  uso
+  uso,
+  userId = null
 }) => {
   if (!uso || typeof uso !== 'object') {
     return null;
@@ -93,7 +94,28 @@ const registrarConsumo = async ({
       totalTokens,
       costoEntrada: Number(costoEntrada.toFixed(8)),
       costoSalida: Number(costoSalida.toFixed(8)),
-      costoTotal: Number(costoTotal.toFixed(8))
+      costoTotal: Number(costoTotal.toFixed(8)),
+      ...(userId ? { userId: Number(userId) } : {})
+    }
+  });
+};
+
+/**
+ * Cuenta el número de consultas realizadas hoy por un usuario específico para el límite diario.
+ * @param {number|string} userId
+ * @param {string} [timezone]
+ * @returns {Promise<number>}
+ */
+const contarConsumoHoyUsuario = async (userId, timezone) => {
+  if (!userId) return 0;
+  const { startOfDay, endOfDay } = getTodayBounds(timezone);
+  return await prisma.aIUsage.count({
+    where: {
+      userId: Number(userId),
+      createdAt: {
+        gte: startOfDay,
+        lte: endOfDay
+      }
     }
   });
 };
@@ -241,6 +263,7 @@ module.exports = {
   obtenerHistorial,
   obtenerResumenHoy,
   obtenerResumenGeneral,
+  contarConsumoHoyUsuario,
   getTodayBounds
 };
 

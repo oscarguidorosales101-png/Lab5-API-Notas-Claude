@@ -37,6 +37,18 @@ class ConflictError extends AppError {
   }
 }
 
+class UnauthorizedError extends AppError {
+  constructor(message = 'No autorizado: credenciales o sesión inválidas', detalles = null) {
+    super(message, 401, detalles);
+  }
+}
+
+class ForbiddenError extends AppError {
+  constructor(message = 'Acceso denegado: permisos insuficientes para esta operación', detalles = null) {
+    super(message, 403, detalles);
+  }
+}
+
 class ValidationError extends AppError {
   constructor(message = 'Error de validación', detalles = []) {
     super(message, 400, detalles);
@@ -48,5 +60,7 @@ module.exports = {
   BadRequestError,
   NotFoundError,
   ConflictError,
+  UnauthorizedError,
+  ForbiddenError,
   ValidationError
 };

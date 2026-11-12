@@ -14,36 +14,41 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  Database
+  Database,
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react';
 
-const navItems = [
-  { path: '/', label: 'Inicio', icon: LayoutDashboard },
-  { path: '/materias', label: 'Materias', icon: BookOpen },
-  { path: '/matriculas', label: 'Matrículas', icon: GraduationCap },
-  { path: '/calificaciones', label: 'Calificaciones', icon: Award },
-  { path: '/notas', label: 'Notas y Apuntes', icon: FileText },
-  { path: '/temas', label: 'Temas', icon: Tag },
-  { path: '/periodos', label: 'Períodos', icon: Calendar },
-  { path: '/ia', label: 'Asistente IA', icon: Bot },
-  { path: '/consumo', label: 'Consumo IA', icon: BarChart3 },
-  { path: '/usuarios', label: 'Usuarios', icon: Users }
+const allNavItems = [
+  { path: '/', label: 'Inicio', icon: LayoutDashboard, roles: ['ADMIN', 'DOCENTE', 'ESTUDIANTE'] },
+  { path: '/materias', label: 'Materias', icon: BookOpen, roles: ['ADMIN', 'DOCENTE', 'ESTUDIANTE'] },
+  { path: '/matriculas', label: 'Matrículas', icon: GraduationCap, roles: ['ADMIN', 'DOCENTE'] },
+  { path: '/calificaciones', label: 'Calificaciones', icon: Award, roles: ['ADMIN', 'DOCENTE', 'ESTUDIANTE'] },
+  { path: '/notas', label: 'Notas y Apuntes', icon: FileText, roles: ['ADMIN', 'DOCENTE', 'ESTUDIANTE'] },
+  { path: '/temas', label: 'Temas', icon: Tag, roles: ['ADMIN', 'DOCENTE'] },
+  { path: '/periodos', label: 'Períodos', icon: Calendar, roles: ['ADMIN'] },
+  { path: '/ia', label: 'Asistente IA', icon: Bot, roles: ['ADMIN', 'DOCENTE', 'ESTUDIANTE'] },
+  { path: '/consumo', label: 'Consumo IA', icon: BarChart3, roles: ['ADMIN'] },
+  { path: '/usuarios', label: 'Usuarios', icon: Users, roles: ['ADMIN'] }
 ];
 
 export const Sidebar = () => {
-  const { sidebarCollapsed, setSidebarCollapsed } = useApp();
+  const { sidebarCollapsed, setSidebarCollapsed, usuario } = useApp();
+
+  const userRole = usuario?.rol || 'ESTUDIANTE';
+  const navItems = allNavItems.filter((item) => item.roles.includes(userRole));
 
   return (
     <aside className={`sidebar ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      {/* Encabezado del Logo */}
+      {/* Contenedor Limpio y Proporcional para el Logo */}
       <div className="sidebar-header">
-        <div className="logo-container">
+        <div className="logo-container" title="Notas Lab — Gestión Académica">
           <div className="logo-icon-box">
-            <GraduationCap size={24} className="logo-icon" />
+            <GraduationCap size={22} className="logo-icon" />
           </div>
           {!sidebarCollapsed && (
             <div className="logo-text-box">
-              <span className="logo-title">SGA Notas</span>
+              <span className="logo-title">Notas Lab</span>
               <span className="logo-subtitle">Gestión Académica</span>
             </div>
           )}
@@ -51,15 +56,22 @@ export const Sidebar = () => {
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
           className="collapse-btn"
-          title={sidebarCollapsed ? 'Expandir menú' : 'Contraer menú'}
+          title={sidebarCollapsed ? 'Expandir menú lateral' : 'Contraer menú lateral'}
         >
-          {sidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {sidebarCollapsed ? <ChevronRight size={17} /> : <ChevronLeft size={17} />}
         </button>
       </div>
 
-      {/* Menú de Navegación */}
+      {/* Menú de Navegación adaptado al rol */}
       <nav className="sidebar-nav">
-        <div className="nav-group-label">{!sidebarCollapsed && 'ACADÉMICO'}</div>
+        <div className="nav-group-label">
+          {!sidebarCollapsed && (
+            <span>
+              {userRole === 'ADMIN' ? 'ADMINISTRACIÓN' : userRole === 'DOCENTE' ? 'DOCENCIA' : 'ESTUDIANTIL'}
+            </span>
+          )}
+        </div>
+
         {navItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -70,24 +82,31 @@ export const Sidebar = () => {
               className={({ isActive }) => `nav-link ${isActive ? 'nav-link-active' : ''}`}
               title={sidebarCollapsed ? item.label : ''}
             >
-              <Icon size={20} className="nav-icon" />
+              <Icon size={19} className="nav-icon" />
               {!sidebarCollapsed && <span className="nav-label">{item.label}</span>}
             </NavLink>
           );
         })}
       </nav>
 
-      {/* Pie de navegación con estado del backend */}
+      {/* Pie de navegación con estado de Base de Datos y Rol */}
       <div className="sidebar-footer">
         <div className="db-status-badge" title="Conectado a MySQL Notas_lab">
-          <Database size={15} className="text-primary" />
+          <Database size={15} className="text-primary-600" />
           {!sidebarCollapsed && (
             <div className="db-status-text">
-              <span className="db-name">MySQL: Notas_lab</span>
-              <span className="db-badge">Activo</span>
+              <span className="db-name">-__-</span>
+              <span className="db-badge">En línea</span>
             </div>
           )}
         </div>
+
+        {!sidebarCollapsed && (
+          <div className="sidebar-role-indicator">
+            <ShieldCheck size={13} className="text-primary-700" />
+            <span className="role-text">Rol: <strong>{userRole}</strong></span>
+          </div>
+        )}
       </div>
 
       <style>{`
@@ -98,9 +117,11 @@ export const Sidebar = () => {
           border-right: 1px solid var(--border-light);
           display: flex;
           flex-direction: column;
+          position: sticky;
+          top: 0;
           transition: width var(--transition-normal);
+          z-index: 60;
           flex-shrink: 0;
-          z-index: 100;
         }
         .sidebar-collapsed {
           width: var(--sidebar-collapsed-width);
@@ -118,43 +139,46 @@ export const Sidebar = () => {
           align-items: center;
           gap: 0.75rem;
           overflow: hidden;
+          text-decoration: none;
         }
         .logo-icon-box {
-          background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
-          color: white;
-          padding: 0.5rem;
-          border-radius: var(--radius-md);
+          width: 38px;
+          height: 38px;
+          border-radius: 10px;
+          background: var(--primary-50);
+          border: 1px solid var(--primary-200);
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 2px 4px rgba(2, 132, 199, 0.25);
+          flex-shrink: 0;
+        }
+        .logo-icon {
+          color: var(--primary-600);
         }
         .logo-text-box {
           display: flex;
           flex-direction: column;
           line-height: 1.15;
-          white-space: nowrap;
+          overflow: hidden;
         }
         .logo-title {
-          font-weight: 800;
           font-size: 1.05rem;
-          color: var(--text-main);
+          font-weight: 800;
+          color: var(--navy-900);
           letter-spacing: -0.02em;
         }
         .logo-subtitle {
           font-size: 0.72rem;
-          font-weight: 600;
-          color: var(--primary-600);
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
+          color: var(--text-muted);
+          font-weight: 500;
         }
         .collapse-btn {
-          background: var(--surface-alt);
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
           border: 1px solid var(--border-light);
+          background: var(--surface-ground);
           color: var(--text-muted);
-          width: 30px;
-          height: 30px;
-          border-radius: var(--radius-sm);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -162,78 +186,90 @@ export const Sidebar = () => {
           transition: all var(--transition-fast);
         }
         .collapse-btn:hover {
-          color: var(--text-main);
-          background: #e2e8f0;
+          background: var(--primary-50);
+          color: var(--primary-700);
+          border-color: var(--primary-200);
         }
         .sidebar-nav {
           flex: 1;
           padding: 1.25rem 0.75rem;
-          overflow-y: auto;
           display: flex;
           flex-direction: column;
-          gap: 0.25rem;
+          gap: 0.3rem;
+          overflow-y: auto;
         }
         .nav-group-label {
-          font-size: 0.6875rem;
-          font-weight: 700;
+          font-size: 0.68rem;
+          font-weight: 800;
           color: var(--text-light);
-          padding: 0.5rem 0.75rem 0.25rem;
-          letter-spacing: 0.06em;
+          letter-spacing: 0.08em;
+          padding: 0 0.65rem 0.5rem 0.65rem;
         }
         .nav-link {
           display: flex;
           align-items: center;
           gap: 0.75rem;
-          padding: 0.625rem 0.875rem;
+          padding: 0.6rem 0.75rem;
           border-radius: var(--radius-md);
           color: var(--text-muted);
+          text-decoration: none;
+          font-size: 0.875rem;
           font-weight: 600;
-          font-size: 0.9rem;
           transition: all var(--transition-fast);
-          white-space: nowrap;
         }
         .nav-link:hover {
-          background-color: var(--primary-50);
-          color: var(--primary-700);
+          background: var(--surface-ground);
+          color: var(--navy-900);
         }
         .nav-link-active {
-          background-color: var(--primary-100);
-          color: var(--primary-800);
-          box-shadow: inset 3px 0 0 var(--primary-600);
+          background: var(--primary-50);
+          color: var(--primary-700);
+          font-weight: 700;
+        }
+        .nav-link-active .nav-icon {
+          color: var(--primary-600);
         }
         .nav-icon {
           flex-shrink: 0;
         }
         .sidebar-footer {
-          padding: 1rem 0.875rem;
+          padding: 1rem 0.75rem;
           border-top: 1px solid var(--border-light);
-          background: #f8fafc;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
         }
         .db-status-badge {
           display: flex;
           align-items: center;
-          gap: 0.625rem;
-          padding: 0.5rem 0.625rem;
-          background: #ffffff;
-          border: 1px solid var(--border-light);
+          gap: 0.65rem;
+          padding: 0.45rem 0.65rem;
+          background: var(--surface-ground);
           border-radius: var(--radius-md);
-          overflow: hidden;
+          border: 1px solid var(--border-light);
         }
         .db-status-text {
           display: flex;
           flex-direction: column;
-          line-height: 1.2;
+          line-height: 1.1;
         }
         .db-name {
-          font-size: 0.75rem;
+          font-size: 0.72rem;
           font-weight: 700;
-          color: var(--text-main);
+          color: var(--navy-900);
         }
         .db-badge {
           font-size: 0.65rem;
-          color: #10b981;
-          font-weight: 700;
-          text-transform: uppercase;
+          color: #059669;
+          font-weight: 600;
+        }
+        .sidebar-role-indicator {
+          display: flex;
+          align-items: center;
+          gap: 0.35rem;
+          padding: 0 0.5rem;
+          font-size: 0.72rem;
+          color: var(--text-muted);
         }
       `}</style>
     </aside>
@@ -241,4 +277,3 @@ export const Sidebar = () => {
 };
 
 export default Sidebar;
-

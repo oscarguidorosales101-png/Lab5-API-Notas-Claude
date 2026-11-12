@@ -7,6 +7,9 @@ const {
   calificacionSchema
 } = require('../validators/academic.validator');
 const { BadRequestError } = require('../utils/errors');
+const { autenticar, requerirRol } = require('../middlewares/auth');
+
+router.use(autenticar);
 
 const validarParamId = (req, res, next) => {
   const numId = Number(req.params.id);
@@ -99,7 +102,7 @@ router.get('/:id', validarParamId, async (req, res, next) => {
  *       409:
  *         description: Matrícula duplicada o prerrequisitos no aprobados.
  */
-router.post('/', validar(matriculaSchema), async (req, res, next) => {
+router.post('/', requerirRol(['ADMIN']), validar(matriculaSchema), async (req, res, next) => {
   try {
     const nuevaMatricula = await matriculasService.crearMatricula(req.body);
     res.status(201).json(nuevaMatricula);
@@ -186,7 +189,7 @@ router.get('/:id/calificaciones', validarParamId, async (req, res, next) => {
  *       409:
  *         description: Nombre de evaluación duplicado.
  */
-router.post('/:id/calificaciones', validarParamId, validar(calificacionSchema), async (req, res, next) => {
+router.post('/:id/calificaciones', requerirRol(['ADMIN', 'DOCENTE']), validarParamId, validar(calificacionSchema), async (req, res, next) => {
   try {
     const calificacion = await matriculasService.agregarCalificacion(req.matriculaId, req.body);
     res.status(201).json(calificacion);
